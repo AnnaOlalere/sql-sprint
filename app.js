@@ -40,7 +40,7 @@ const BASE_TABLES = {
   ]
 };
 
-const SKILLS = ["SELECT", "WHERE", "GROUP", "JOIN", "CASE", "SUBQUERY", "CTE", "WINDOW"];
+const SKILLS = ["SELECT", "WHERE", "ORDER", "COUNT", "GROUP", "JOIN", "CASE", "SUBQUERY", "CTE", "WINDOW"];
 const STORAGE_PREFIX = "sql-sprint-profile:";
 const LAST_PROFILE_KEY = "sql-sprint-last-profile";
 const SUPABASE_SETTINGS = window.SQL_SPRINT_SUPABASE || {};
@@ -59,7 +59,9 @@ const state = {
   score: 0,
   streak: 0,
   attempts: 0,
+  filter: "ALL",
   solved: new Set(),
+  missed: new Set(),
   skill: Object.fromEntries(SKILLS.map((skill) => [skill, { correct: 0, total: 0 }]))
 };
 
@@ -299,6 +301,8 @@ const el = {
   signupBtn: document.querySelector("#signupBtn"),
   logoutBtn: document.querySelector("#logoutBtn"),
   profileStatus: document.querySelector("#profileStatus"),
+  topicFilter: document.querySelector("#topicFilter"),
+  filterStatus: document.querySelector("#filterStatus"),
   skillMap: document.querySelector("#skillMap"),
   challengeList: document.querySelector("#challengeList"),
   difficulty: document.querySelector("#difficulty"),
@@ -499,7 +503,9 @@ function resetProgress(profile = state.profile, userId = state.userId) {
   state.score = 0;
   state.streak = 0;
   state.attempts = 0;
+  state.filter = "ALL";
   state.solved = new Set();
+  state.missed = new Set();
   state.skill = Object.fromEntries(SKILLS.map((skill) => [skill, { correct: 0, total: 0 }]));
 }
 
@@ -510,7 +516,9 @@ function serializeProgress() {
     current: state.current,
     score: state.score,
     streak: state.streak,
+    filter: state.filter,
     solved: Array.from(state.solved),
+    missed: Array.from(state.missed),
     skill: state.skill
   };
 }
@@ -519,8 +527,41 @@ function applyProgress(progress) {
   state.current = Number(progress?.current ?? progress?.current_question) || 0;
   state.score = Number(progress?.score) || 0;
   state.streak = Number(progress?.streak) || 0;
+  state.filter = progress?.filter || "ALL";
   state.solved = new Set(progress?.solved || []);
+  state.missed = new Set(progress?.missed || []);
   state.skill = { ...state.skill, ...(progress?.skill || {}) };
+}
+
+function filteredChallengeIndexes() {
+  if (state.filter === "MISSED") return Array.from(state.missed).filter((index) => challenges[index]);
+  if (state.filter === "ALL") return challenges.map((_, index) => index);
+  return challenges
+    .map((challenge, index) => ({ challenge, index }))
+    .filter(({ challenge }) => challenge.skill === state.filter)
+    .map(({ index }) => index);
+}
+
+function ensureVisibleChallenge() {
+  const indexes = filteredChallengeIndexes();
+  if (!indexes.length) return;
+  if (!indexes.includes(state.current)) state.current = indexes[0];
+}
+
+function setupFilters() {
+  const options = [
+    `<option value="ALL">All topics</option>`,
+    `<option value="MISSED">Review missed</option>`,
+    ...SKILLS.map((skill) => `<option value="${skill}">${skill}</option>`)
+  ];
+  el.topicFilter.innerHTML = options.join("");
+  el.topicFilter.value = state.filter;
+}
+
+function renderFilterStatus() {
+  const count = filteredChallengeIndexes().length;
+  const label = state.filter === "ALL" ? "all topics" : state.filter === "MISSED" ? "missed questions" : state.filter;
+  el.filterStatus.textContent = `Showing ${count} ${label} drill${count === 1 ? "" : "s"}.`;
 }
 
 async function saveProgress() {
@@ -532,6 +573,7 @@ async function saveProgress() {
       score: state.score,
       streak: state.streak,
       solved: Array.from(state.solved),
+      missed: Array.from(state.missed),
       skill: state.skill,
       updated_at: new Date().toISOString()
     });
@@ -882,6 +924,8 @@ function escapeHtml(value) {
 }
 
 function renderChallenge() {
+  setupFilters();
+  ensureVisibleChallenge();
   const challenge = challenges[state.current];
   state.attempts = 0;
   el.difficulty.textContent = challenge.difficulty;
@@ -899,16 +943,24 @@ function renderChallenge() {
   el.schemaArea.innerHTML = tableNames
     .map((name) => `<article class="table-card"><div class="table-title">${name}</div>${renderTable(BASE_TABLES[name])}</article>`)
     .join("");
+  renderFilterStatus();
   renderChallengeList();
 }
 
 function renderChallengeList() {
-  el.challengeList.innerHTML = challenges
-    .map((challenge, index) => {
+  const indexes = filteredChallengeIndexes();
+  if (!indexes.length) {
+    el.challengeList.innerHTML = `<div class="empty-filter">No drills here yet.</div>`;
+    return;
+  }
+  el.challengeList.innerHTML = indexes
+    .map((index) => {
+      const challenge = challenges[index];
       const active = index === state.current ? "active" : "";
       const done = state.solved.has(index) ? "done" : "";
+      const missed = state.missed.has(index) ? "missed" : "";
       return `<button class="challenge-button ${active} ${done}" type="button" data-index="${index}">
-        <span>${challenge.id}</span><span>${escapeHtml(challenge.title)}</span><span class="mini-level">${challenge.difficulty}</span>
+        <span>${challenge.id}</span><span>${escapeHtml(challenge.title)}</span><span class="mini-level ${missed}">${challenge.skill}</span>
       </button>`;
     })
     .join("");
@@ -949,8 +1001,6 @@ function runCurrentQuery() {
 
   el.actualResult.className = "result-box";
   el.actualResult.innerHTML = parsed.error ? "<div class=\"empty-state\">Query could not run.</div>" : renderTable(actual);
-  el.feedback.className = "feedback";
-  el.feedback.innerHTML = messages.map((message) => `<div class="feedback-item ${message.type}"><strong>${message.title}</strong>${escapeHtml(message.text)}</div>`).join("");
 
   state.skill[challenge.skill].total += 1;
   if (resultMatches) {
@@ -959,13 +1009,34 @@ function runCurrentQuery() {
       state.score += Math.max(2, 12 - state.attempts * 2);
       state.solved.add(state.current);
     }
+    state.missed.delete(state.current);
     state.streak += 1;
+    messages.push({ type: "info", title: "Why it works", text: explainChallenge(challenge) });
   } else {
+    state.missed.add(state.current);
     state.streak = 0;
   }
+  el.feedback.className = "feedback";
+  el.feedback.innerHTML = messages.map((message) => `<div class="feedback-item ${message.type}"><strong>${message.title}</strong>${escapeHtml(message.text)}</div>`).join("");
   renderStats();
+  renderFilterStatus();
   renderChallengeList();
   saveProgress();
+}
+
+function explainChallenge(challenge) {
+  const parts = [];
+  const expected = challenge.expected;
+  if (expected.cte) parts.push(`The CTE builds ${expected.cte.name} first, then the outer query reads from that temporary result.`);
+  if (expected.select?.length) parts.push(`The SELECT clause returns ${expected.select.join(", ")}.`);
+  if (expected.join) parts.push(`The JOIN connects ${expected.from} to ${expected.join.table} with ${expected.join.left} = ${expected.join.right}.`);
+  if (expected.where) parts.push(`The WHERE clause keeps rows where ${expected.where.column} ${expected.where.operator} ${expected.where.value}.`);
+  if (expected.subqueryWhere) parts.push(`The subquery finds matching ${expected.subqueryWhere.select} values, and the outer query keeps rows whose ${expected.subqueryWhere.column} is in that list.`);
+  if (expected.groupBy) parts.push(`GROUP BY collapses rows into one result per ${expected.groupBy.join(", ")}.`);
+  if (expected.caseWhen) parts.push("CASE WHEN creates a new label based on a condition for each row.");
+  if (expected.window) parts.push(`ROW_NUMBER ranks rows within each ${expected.window.partitionBy} group using ${expected.window.orderBy.column} ${expected.window.orderBy.direction}.`);
+  if (expected.orderBy) parts.push(`ORDER BY sorts the final result by ${expected.orderBy.column} ${expected.orderBy.direction}.`);
+  return parts.join(" ");
 }
 
 function showHint() {
@@ -989,7 +1060,10 @@ function showAnswer() {
 }
 
 function move(delta) {
-  state.current = (state.current + delta + challenges.length) % challenges.length;
+  const indexes = filteredChallengeIndexes();
+  if (!indexes.length) return;
+  const currentPosition = indexes.includes(state.current) ? indexes.indexOf(state.current) : 0;
+  state.current = indexes[(currentPosition + delta + indexes.length) % indexes.length];
   renderChallenge();
   saveProgress();
 }
@@ -1004,6 +1078,12 @@ el.signupBtn.addEventListener("click", signUp);
 el.logoutBtn.addEventListener("click", signOut);
 el.authPassword.addEventListener("keydown", (event) => {
   if (event.key === "Enter") signIn();
+});
+el.topicFilter.addEventListener("change", () => {
+  state.filter = el.topicFilter.value;
+  ensureVisibleChallenge();
+  renderChallenge();
+  saveProgress();
 });
 el.challengeList.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-index]");

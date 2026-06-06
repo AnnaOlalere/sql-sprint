@@ -4,9 +4,13 @@ create table if not exists public.sql_sprint_progress (
   score integer not null default 0,
   streak integer not null default 0,
   solved jsonb not null default '[]'::jsonb,
+  missed jsonb not null default '[]'::jsonb,
   skill jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
+
+alter table public.sql_sprint_progress
+add column if not exists missed jsonb not null default '[]'::jsonb;
 
 alter table public.sql_sprint_progress enable row level security;
 

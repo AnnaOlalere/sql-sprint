@@ -23,6 +23,7 @@ No install step is required.
 - Gives clause-specific feedback for `SELECT`, `FROM`, `WHERE`, `JOIN`, `GROUP BY`, and `ORDER BY`
 - Includes analyst-style drills for `CASE WHEN`, subqueries, CTEs, window functions, and KPI-style subscription questions
 - Tracks score, streak, accuracy, solved drills, and skill-area progress
+- Lets learners filter by topic, review missed questions, and read short explanations after correct answers
 - Lets learners log in with email/password and resume progress with Supabase
 - Includes 100 generated drills from beginner to harder query patterns
 

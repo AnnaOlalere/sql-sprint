@@ -171,15 +171,39 @@ button {
 }
 
 .skill-panel,
+.filter-panel,
 .challenge-list {
   min-height: 0;
 }
 
 .skill-panel h2,
+.filter-panel h2,
 .challenge-list h2 {
   margin-bottom: 10px;
   font-size: 14px;
   color: #dbe3ed;
+}
+
+.filter-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.filter-panel select {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+}
+
+.filter-panel p {
+  margin: 0;
+  color: #b9c2cf;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .skill-map {
@@ -275,6 +299,19 @@ button {
 .mini-level {
   color: #b9c2cf;
   font-size: 11px;
+}
+
+.mini-level.missed {
+  color: #fbbf24;
+}
+
+.empty-filter {
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #b9c2cf;
+  font-size: 13px;
 }
 
 .workspace {
@@ -487,6 +524,11 @@ textarea:focus {
 .feedback-item.warn {
   border-color: var(--warn);
   background: #fff7ed;
+}
+
+.feedback-item.info {
+  border-color: var(--blue);
+  background: #eef6ff;
 }
 
 .feedback-item strong {
