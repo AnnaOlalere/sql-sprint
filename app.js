@@ -551,7 +551,7 @@ function ensureVisibleChallenge() {
 function setupFilters() {
   const options = [
     `<option value="ALL">All topics</option>`,
-    `<option value="MISSED">Review missed</option>`,
+    `<option value="MISSED">Review Missed Questions</option>`,
     ...SKILLS.map((skill) => `<option value="${skill}">${skill}</option>`)
   ];
   el.topicFilter.innerHTML = options.join("");
