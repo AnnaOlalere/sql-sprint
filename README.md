@@ -2,6 +2,8 @@
 
 A dependency-free MVP for rapid-fire SQL practice inspired by SQLBolt and Power BI-style targeted diagnostics.
 
+Copyright (c) 2026 Anna Olalere. All rights reserved.
+
 ## Run It
 
 Open this file in your browser:
@@ -20,7 +22,7 @@ No install step is required.
 - Compares the result against the expected answer
 - Gives clause-specific feedback for `SELECT`, `FROM`, `WHERE`, `JOIN`, `GROUP BY`, and `ORDER BY`
 - Tracks score, streak, accuracy, solved drills, and skill-area progress
-- Lets learners log in with a local profile name and resume later in the same browser
+- Lets learners log in with email/password and resume progress with Supabase
 - Includes 100 generated drills from beginner to harder query patterns
 
 ## Progress Saving
@@ -59,3 +61,9 @@ Edit `app.js`.
 - Add more SQL support in `parseSql` and `evaluateQuery`
 
 The current evaluator intentionally supports a focused SQL-training subset. For a production version, the next step would be replacing the hand-built evaluator with SQLite or DuckDB in the browser, while keeping the clause diagnostics layer.
+
+## Intellectual Property
+
+The source code, interface, question wording, fictional practice tables, sample data, explanations, and feedback text are original project materials.
+
+This project does not claim exclusive ownership over SQL syntax, generic table concepts, scoring mechanics, query practice, or the general idea of an interactive SQL learning tool.

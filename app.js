@@ -154,16 +154,27 @@ const templates = [
   }
 ];
 
-const challenges = Array.from({ length: 100 }, (_, index) => {
-  const base = templates[index % templates.length];
-  const round = Math.floor(index / templates.length) + 1;
-  return {
-    id: index + 1,
-    ...structuredClone(base),
-    title: `${base.title} ${round}`,
-    prompt: `${base.prompt} (${index + 1}/100)`
-  };
-});
+const challengePlan = [
+  { difficulty: "Easy", count: 60 },
+  { difficulty: "Medium", count: 30 },
+  { difficulty: "Hard", count: 10 }
+];
+
+const challenges = challengePlan.flatMap(({ difficulty, count }) => {
+  const pool = templates.filter((template) => template.difficulty === difficulty);
+  return Array.from({ length: count }, (_, index) => {
+    const base = pool[index % pool.length];
+    const round = Math.floor(index / pool.length) + 1;
+    return {
+      ...structuredClone(base),
+      title: `${base.title} ${round}`
+    };
+  });
+}).map((challenge, index) => ({
+  ...challenge,
+  id: index + 1,
+  prompt: `${challenge.prompt} (${index + 1}/100)`
+}));
 
 const el = {
   score: document.querySelector("#score"),
