@@ -199,6 +199,11 @@ button {
   color: #f8fafc;
 }
 
+.filter-panel select option {
+  background: #ffffff;
+  color: #20252d;
+}
+
 .filter-panel p {
   margin: 0;
   color: #b9c2cf;
