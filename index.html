@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SQL Sprint</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar" aria-label="Progress">
+        <div class="brand">
+          <span class="brand-mark">SQL</span>
+          <div>
+            <h1>SQL Sprint</h1>
+            <p>Rapid-fire query practice</p>
+          </div>
+        </div>
+
+        <section class="profile-panel" aria-label="Learner profile">
+          <label for="authEmail">Account</label>
+          <div class="auth-stack">
+            <input id="authEmail" type="email" autocomplete="email" placeholder="Email">
+            <input id="authPassword" type="password" autocomplete="current-password" placeholder="Password">
+          </div>
+          <div class="profile-row">
+            <button id="loginBtn" type="button">Log in</button>
+            <button id="signupBtn" type="button">Sign up</button>
+            <button id="logoutBtn" type="button">Log out</button>
+          </div>
+          <p id="profileStatus">Add Supabase config for cloud sync.</p>
+        </section>
+
+        <section class="score-panel" aria-label="Score">
+          <div>
+            <span class="metric-label">Score</span>
+            <strong id="score">0</strong>
+          </div>
+          <div>
+            <span class="metric-label">Streak</span>
+            <strong id="streak">0</strong>
+          </div>
+          <div>
+            <span class="metric-label">Accuracy</span>
+            <strong id="accuracy">0%</strong>
+          </div>
+          <div>
+            <span class="metric-label">Done</span>
+            <strong id="doneCount">0/100</strong>
+          </div>
+        </section>
+
+        <section class="skill-panel" aria-label="Skill progress">
+          <h2>Skill Map</h2>
+          <div id="skillMap" class="skill-map"></div>
+        </section>
+
+        <section class="challenge-list" aria-label="Challenges">
+          <h2>100 Drills</h2>
+          <div id="challengeList"></div>
+        </section>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <span id="difficulty" class="difficulty">Easy</span>
+            <h2 id="prompt">Loading challenge...</h2>
+          </div>
+          <div class="actions">
+            <button id="prevBtn" type="button" class="icon-button" aria-label="Previous challenge" title="Previous challenge">&larr;</button>
+            <button id="nextBtn" type="button" class="icon-button" aria-label="Next challenge" title="Next challenge">&rarr;</button>
+          </div>
+        </header>
+
+        <section id="schemaArea" class="schema-grid" aria-label="Tables"></section>
+
+        <section class="query-layout">
+          <div class="editor-panel">
+            <div class="panel-head">
+              <h3>Query</h3>
+              <button id="hintBtn" type="button" class="secondary-button">Hint</button>
+            </div>
+            <textarea id="sqlInput" spellcheck="false" aria-label="SQL query"></textarea>
+            <div class="button-row">
+              <button id="runBtn" type="button" class="primary-button">Run Query</button>
+              <button id="answerBtn" type="button" class="secondary-button">Show Answer</button>
+            </div>
+          </div>
+
+          <div class="feedback-panel" aria-live="polite">
+            <div class="panel-head">
+              <h3>Feedback</h3>
+              <span id="attemptBadge" class="attempt-badge">Attempt 1</span>
+            </div>
+            <div id="feedback" class="feedback empty-state">
+              Write a query and run it to get targeted feedback.
+            </div>
+          </div>
+        </section>
+
+        <section class="results-grid">
+          <div>
+            <h3>Your Result</h3>
+            <div id="actualResult" class="result-box empty-state">No result yet.</div>
+          </div>
+          <div>
+            <h3>Expected Result</h3>
+            <div id="expectedResult" class="result-box"></div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
