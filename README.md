@@ -21,6 +21,7 @@ No install step is required.
 - Lets the learner write a SQL query
 - Compares the result against the expected answer
 - Gives clause-specific feedback for `SELECT`, `FROM`, `WHERE`, `JOIN`, `GROUP BY`, and `ORDER BY`
+- Includes analyst-style drills for `CASE WHEN`, subqueries, CTEs, window functions, and KPI-style subscription questions
 - Tracks score, streak, accuracy, solved drills, and skill-area progress
 - Lets learners log in with email/password and resume progress with Supabase
 - Includes 100 generated drills from beginner to harder query patterns
@@ -60,7 +61,7 @@ Edit `app.js`.
 - Add more feedback rules in `diagnose`
 - Add more SQL support in `parseSql` and `evaluateQuery`
 
-The current evaluator intentionally supports a focused SQL-training subset. For a production version, the next step would be replacing the hand-built evaluator with SQLite or DuckDB in the browser, while keeping the clause diagnostics layer.
+The current evaluator intentionally supports a focused SQL-training subset, including common forms of joins, grouped aggregates, CASE WHEN, one-level subqueries, simple CTEs, and ROW_NUMBER window functions. For a production version, the next step would be replacing the hand-built evaluator with SQLite or DuckDB in the browser, while keeping the clause diagnostics layer.
 
 ## Intellectual Property
 
