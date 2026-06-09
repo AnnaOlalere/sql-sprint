@@ -24,8 +24,9 @@ No install step is required.
 - Includes analyst-style drills for `CASE WHEN`, subqueries, CTEs, window functions, and KPI-style subscription questions
 - Tracks score, streak, accuracy, solved drills, and skill-area progress
 - Lets learners filter by topic, review missed questions, and read short explanations after correct answers
+- Prompts learners to move to the next question after a correct answer
 - Lets learners log in with email/password and resume progress with Supabase
-- Includes 100 generated drills from beginner to harder query patterns
+- Includes 100 varied drills from beginner to harder query patterns
 
 ## Progress Saving
 

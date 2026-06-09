@@ -274,15 +274,146 @@ const challengePlan = [
   { difficulty: "Hard", count: 20 }
 ];
 
+function withVariant(base, round) {
+  const variant = challengeVariants[base.title]?.[(round - 1) % challengeVariants[base.title].length];
+  if (!variant) return { ...structuredClone(base), title: `${base.title} ${round}` };
+  return { ...structuredClone(base), ...structuredClone(variant) };
+}
+
+const challengeVariants = {
+  "Choose a column": [
+    { title: "Choose customer names", prompt: "Show every customer's name.", answer: "SELECT name FROM customers;", expected: { select: ["name"], from: "customers" } },
+    { title: "Choose customer cities", prompt: "Show every customer's city.", answer: "SELECT city FROM customers;", expected: { select: ["city"], from: "customers" } },
+    { title: "Choose customer tiers", prompt: "Show every customer's tier.", answer: "SELECT tier FROM customers;", expected: { select: ["tier"], from: "customers" } },
+    { title: "Choose order products", table: "orders", prompt: "Show every ordered product.", answer: "SELECT product FROM orders;", expected: { select: ["product"], from: "orders" } },
+    { title: "Choose ticket owners", table: "tickets", prompt: "Show every ticket owner.", answer: "SELECT owner FROM tickets;", expected: { select: ["owner"], from: "tickets" } }
+  ],
+  "Filter text": [
+    { title: "Filter Boston customers", prompt: "Show the names of customers from Boston.", answer: "SELECT name FROM customers WHERE city = 'Boston';", expected: { select: ["name"], from: "customers", where: { column: "city", operator: "=", value: "Boston" } } },
+    { title: "Filter Gold customers", prompt: "Show the names of Gold tier customers.", answer: "SELECT name FROM customers WHERE tier = 'Gold';", expected: { select: ["name"], from: "customers", where: { column: "tier", operator: "=", value: "Gold" } } },
+    { title: "Filter shipped orders", table: "orders", prompt: "Show products from shipped orders.", answer: "SELECT product FROM orders WHERE status = 'shipped';", expected: { select: ["product"], from: "orders", where: { column: "status", operator: "=", value: "shipped" } } },
+    { title: "Filter high tickets", table: "tickets", prompt: "Show owners of high priority tickets.", answer: "SELECT owner FROM tickets WHERE priority = 'high';", expected: { select: ["owner"], from: "tickets", where: { column: "priority", operator: "=", value: "high" } } },
+    { title: "Filter active subscriptions", table: "subscriptions", prompt: "Show customer IDs for active subscriptions.", answer: "SELECT customer_id FROM subscriptions WHERE status = 'active';", expected: { select: ["customer_id"], from: "subscriptions", where: { column: "status", operator: "=", value: "active" } } }
+  ],
+  "Filter numbers": [
+    { title: "Filter larger orders", prompt: "Show products from orders with an amount greater than 100.", answer: "SELECT product FROM orders WHERE amount > 100;", expected: { select: ["product"], from: "orders", where: { column: "amount", operator: ">", value: 100 } } },
+    { title: "Filter smaller orders", prompt: "Show products from orders with an amount less than 100.", answer: "SELECT product FROM orders WHERE amount < 100;", expected: { select: ["product"], from: "orders", where: { column: "amount", operator: "<", value: 100 } } },
+    { title: "Filter expensive products", table: "products", prompt: "Show product names with a price greater than 400.", answer: "SELECT name FROM products WHERE price > 400;", expected: { select: ["name"], from: "products", where: { column: "price", operator: ">", value: 400 } } },
+    { title: "Filter long-open tickets", table: "tickets", prompt: "Show owners of tickets open for at least 5 days.", answer: "SELECT owner FROM tickets WHERE days_open >= 5;", expected: { select: ["owner"], from: "tickets", where: { column: "days_open", operator: ">=", value: 5 } } },
+    { title: "Filter higher salaries", table: "employees", prompt: "Show employee names with salaries greater than 80000.", answer: "SELECT name FROM employees WHERE salary > 80000;", expected: { select: ["name"], from: "employees", where: { column: "salary", operator: ">", value: 80000 } } }
+  ],
+  "Sort rows": [
+    { title: "Sort salaries high to low", prompt: "Show employee names and salaries from highest salary to lowest.", answer: "SELECT name, salary FROM employees ORDER BY salary DESC;", expected: { select: ["name", "salary"], from: "employees", orderBy: { column: "salary", direction: "DESC" } } },
+    { title: "Sort salaries low to high", prompt: "Show employee names and salaries from lowest salary to highest.", answer: "SELECT name, salary FROM employees ORDER BY salary ASC;", expected: { select: ["name", "salary"], from: "employees", orderBy: { column: "salary", direction: "ASC" } } },
+    { title: "Sort orders high to low", table: "orders", prompt: "Show products and amounts from highest amount to lowest.", answer: "SELECT product, amount FROM orders ORDER BY amount DESC;", expected: { select: ["product", "amount"], from: "orders", orderBy: { column: "amount", direction: "DESC" } } },
+    { title: "Sort product prices low to high", table: "products", prompt: "Show product names and prices from lowest price to highest.", answer: "SELECT name, price FROM products ORDER BY price ASC;", expected: { select: ["name", "price"], from: "products", orderBy: { column: "price", direction: "ASC" } } },
+    { title: "Sort tickets by age", table: "tickets", prompt: "Show ticket owners and days open from most days to fewest.", answer: "SELECT owner, days_open FROM tickets ORDER BY days_open DESC;", expected: { select: ["owner", "days_open"], from: "tickets", orderBy: { column: "days_open", direction: "DESC" } } }
+  ],
+  "Multiple columns": [
+    { title: "Show order details", prompt: "Show product and status for every order.", answer: "SELECT product, status FROM orders;", expected: { select: ["product", "status"], from: "orders" } },
+    { title: "Show customer location", table: "customers", prompt: "Show name and city for every customer.", answer: "SELECT name, city FROM customers;", expected: { select: ["name", "city"], from: "customers" } },
+    { title: "Show employee departments", table: "employees", prompt: "Show name and department for every employee.", answer: "SELECT name, department FROM employees;", expected: { select: ["name", "department"], from: "employees" } },
+    { title: "Show product pricing", table: "products", prompt: "Show name and price for every product.", answer: "SELECT name, price FROM products;", expected: { select: ["name", "price"], from: "products" } },
+    { title: "Show ticket priority", table: "tickets", prompt: "Show owner and priority for every ticket.", answer: "SELECT owner, priority FROM tickets;", expected: { select: ["owner", "priority"], from: "tickets" } }
+  ],
+  "Open work": [
+    { title: "Tickets open five days", prompt: "Show owners of tickets open for at least 5 days.", answer: "SELECT owner FROM tickets WHERE days_open >= 5;", expected: { select: ["owner"], from: "tickets", where: { column: "days_open", operator: ">=", value: 5 } } },
+    { title: "Tickets open over ten days", prompt: "Show owners of tickets open for more than 10 days.", answer: "SELECT owner FROM tickets WHERE days_open > 10;", expected: { select: ["owner"], from: "tickets", where: { column: "days_open", operator: ">", value: 10 } } },
+    { title: "Recently opened tickets", prompt: "Show owners of tickets open for 4 days or fewer.", answer: "SELECT owner FROM tickets WHERE days_open <= 4;", expected: { select: ["owner"], from: "tickets", where: { column: "days_open", operator: "<=", value: 4 } } },
+    { title: "Orders at least 240", table: "orders", prompt: "Show products from orders with amount at least 240.", answer: "SELECT product FROM orders WHERE amount >= 240;", expected: { select: ["product"], from: "orders", where: { column: "amount", operator: ">=", value: 240 } } },
+    { title: "Products at most 180", table: "products", prompt: "Show product names with price at most 180.", answer: "SELECT name FROM products WHERE price <= 180;", expected: { select: ["name"], from: "products", where: { column: "price", operator: "<=", value: 180 } } }
+  ],
+  "Subscription status": [
+    { title: "Active subscription customers", prompt: "Show customer IDs for active subscriptions.", answer: "SELECT customer_id FROM subscriptions WHERE status = 'active';", expected: { select: ["customer_id"], from: "subscriptions", where: { column: "status", operator: "=", value: "active" } } },
+    { title: "Cancelled subscription customers", prompt: "Show customer IDs for cancelled subscriptions.", answer: "SELECT customer_id FROM subscriptions WHERE status = 'cancelled';", expected: { select: ["customer_id"], from: "subscriptions", where: { column: "status", operator: "=", value: "cancelled" } } },
+    { title: "Pro subscription customers", prompt: "Show customer IDs for Pro subscriptions.", answer: "SELECT customer_id FROM subscriptions WHERE plan = 'Pro';", expected: { select: ["customer_id"], from: "subscriptions", where: { column: "plan", operator: "=", value: "Pro" } } },
+    { title: "Basic subscription status", prompt: "Show statuses for Basic subscriptions.", answer: "SELECT status FROM subscriptions WHERE plan = 'Basic';", expected: { select: ["status"], from: "subscriptions", where: { column: "plan", operator: "=", value: "Basic" } } },
+    { title: "Team subscription customers", prompt: "Show customer IDs for Team subscriptions.", answer: "SELECT customer_id FROM subscriptions WHERE plan = 'Team';", expected: { select: ["customer_id"], from: "subscriptions", where: { column: "plan", operator: "=", value: "Team" } } }
+  ],
+  "Count rows": [
+    { title: "Count high tickets", prompt: "Count how many tickets have high priority.", answer: "SELECT COUNT(*) FROM tickets WHERE priority = 'high';", expected: { select: ["COUNT(*)"], from: "tickets", where: { column: "priority", operator: "=", value: "high" } } },
+    { title: "Count low tickets", prompt: "Count how many tickets have low priority.", answer: "SELECT COUNT(*) FROM tickets WHERE priority = 'low';", expected: { select: ["COUNT(*)"], from: "tickets", where: { column: "priority", operator: "=", value: "low" } } },
+    { title: "Count shipped orders", table: "orders", prompt: "Count how many orders have shipped.", answer: "SELECT COUNT(*) FROM orders WHERE status = 'shipped';", expected: { select: ["COUNT(*)"], from: "orders", where: { column: "status", operator: "=", value: "shipped" } } },
+    { title: "Count active subscriptions", table: "subscriptions", prompt: "Count active subscriptions.", answer: "SELECT COUNT(*) FROM subscriptions WHERE status = 'active';", expected: { select: ["COUNT(*)"], from: "subscriptions", where: { column: "status", operator: "=", value: "active" } } },
+    { title: "Count cancelled subscriptions", table: "subscriptions", prompt: "Count cancelled subscriptions.", answer: "SELECT COUNT(*) FROM subscriptions WHERE status = 'cancelled';", expected: { select: ["COUNT(*)"], from: "subscriptions", where: { column: "status", operator: "=", value: "cancelled" } } }
+  ],
+  "Group totals": [
+    { title: "Average salary by department", prompt: "Show each department and the average salary in that department.", answer: "SELECT department, AVG(salary) FROM employees GROUP BY department;", expected: { select: ["department", "AVG(salary)"], from: "employees", groupBy: ["department"] } },
+    { title: "Employee count by department", prompt: "Show each department and employee count.", answer: "SELECT department, COUNT(*) FROM employees GROUP BY department;", expected: { select: ["department", "COUNT(*)"], from: "employees", groupBy: ["department"] } },
+    { title: "Total order amount by customer", table: "orders", prompt: "Show each customer ID and total order amount.", answer: "SELECT customer_id, SUM(amount) FROM orders GROUP BY customer_id;", expected: { select: ["customer_id", "SUM(amount)"], from: "orders", groupBy: ["customer_id"] } },
+    { title: "Order count by status", table: "orders", prompt: "Show each order status and the number of orders.", answer: "SELECT status, COUNT(*) FROM orders GROUP BY status;", expected: { select: ["status", "COUNT(*)"], from: "orders", groupBy: ["status"] } },
+    { title: "Subscription count by plan", table: "subscriptions", prompt: "Show each plan and subscription count.", answer: "SELECT plan, COUNT(*) FROM subscriptions GROUP BY plan;", expected: { select: ["plan", "COUNT(*)"], from: "subscriptions", groupBy: ["plan"] } }
+  ],
+  "Join revenue": [
+    { title: "Join product to city", prompt: "Show each order product with the customer's city.", answer: "SELECT orders.product, customers.city FROM orders JOIN customers ON orders.customer_id = customers.id;", expected: { select: ["orders.product", "customers.city"], from: "orders", join: { table: "customers", left: "orders.customer_id", right: "customers.id" } } },
+    { title: "Join product to tier", prompt: "Show each order product with the customer's tier.", answer: "SELECT orders.product, customers.tier FROM orders JOIN customers ON orders.customer_id = customers.id;", expected: { select: ["orders.product", "customers.tier"], from: "orders", join: { table: "customers", left: "orders.customer_id", right: "customers.id" } } },
+    { title: "Join amount to customer", prompt: "Show each order amount with the customer's name.", answer: "SELECT orders.amount, customers.name FROM orders JOIN customers ON orders.customer_id = customers.id;", expected: { select: ["orders.amount", "customers.name"], from: "orders", join: { table: "customers", left: "orders.customer_id", right: "customers.id" } } },
+    { title: "Join status to customer", prompt: "Show each order status with the customer's name.", answer: "SELECT orders.status, customers.name FROM orders JOIN customers ON orders.customer_id = customers.id;", expected: { select: ["orders.status", "customers.name"], from: "orders", join: { table: "customers", left: "orders.customer_id", right: "customers.id" } } },
+    { title: "Join shipped product to customer", prompt: "Show shipped order products with customer names.", answer: "SELECT orders.product, customers.name FROM orders JOIN customers ON orders.customer_id = customers.id WHERE orders.status = 'shipped';", expected: { select: ["orders.product", "customers.name"], from: "orders", join: { table: "customers", left: "orders.customer_id", right: "customers.id" }, where: { column: "orders.status", operator: "=", value: "shipped" } } }
+  ],
+  "Spend by customer": [
+    { title: "Total spend by customer", prompt: "Show each customer ID and total order amount.", answer: "SELECT customer_id, SUM(amount) FROM orders GROUP BY customer_id;", expected: { select: ["customer_id", "SUM(amount)"], from: "orders", groupBy: ["customer_id"] } },
+    { title: "Order count by customer", prompt: "Show each customer ID and order count.", answer: "SELECT customer_id, COUNT(*) FROM orders GROUP BY customer_id;", expected: { select: ["customer_id", "COUNT(*)"], from: "orders", groupBy: ["customer_id"] } },
+    { title: "Largest order by customer", prompt: "Show each customer ID and their largest order amount.", answer: "SELECT customer_id, MAX(amount) FROM orders GROUP BY customer_id;", expected: { select: ["customer_id", "MAX(amount)"], from: "orders", groupBy: ["customer_id"] } },
+    { title: "Average order by customer", prompt: "Show each customer ID and average order amount.", answer: "SELECT customer_id, AVG(amount) FROM orders GROUP BY customer_id;", expected: { select: ["customer_id", "AVG(amount)"], from: "orders", groupBy: ["customer_id"] } },
+    { title: "Total amount by status", prompt: "Show each order status and total amount.", answer: "SELECT status, SUM(amount) FROM orders GROUP BY status;", expected: { select: ["status", "SUM(amount)"], from: "orders", groupBy: ["status"] } }
+  ],
+  "Category prices": [
+    { title: "Highest price by category", prompt: "Show each product category and its highest price.", answer: "SELECT category, MAX(price) FROM products GROUP BY category;", expected: { select: ["category", "MAX(price)"], from: "products", groupBy: ["category"] } },
+    { title: "Total price by category", prompt: "Show each product category and total listed price.", answer: "SELECT category, SUM(price) FROM products GROUP BY category;", expected: { select: ["category", "SUM(price)"], from: "products", groupBy: ["category"] } },
+    { title: "Product count by category", prompt: "Show each product category and number of products.", answer: "SELECT category, COUNT(*) FROM products GROUP BY category;", expected: { select: ["category", "COUNT(*)"], from: "products", groupBy: ["category"] } },
+    { title: "Average price by category", prompt: "Show each product category and average price.", answer: "SELECT category, AVG(price) FROM products GROUP BY category;", expected: { select: ["category", "AVG(price)"], from: "products", groupBy: ["category"] } },
+    { title: "Highest salary by department", table: "employees", prompt: "Show each department and its highest salary.", answer: "SELECT department, MAX(salary) FROM employees GROUP BY department;", expected: { select: ["department", "MAX(salary)"], from: "employees", groupBy: ["department"] } }
+  ],
+  "CASE order bands": [
+    { title: "CASE order size", prompt: "Show each product and label orders amount 100 or more as 'large', otherwise 'small'.", answer: "SELECT product, CASE WHEN amount >= 100 THEN 'large' ELSE 'small' END FROM orders;", expected: { select: ["product", "CASE WHEN amount >= 100 THEN 'large' ELSE 'small' END"], from: "orders", caseWhen: true } },
+    { title: "CASE order shipped", prompt: "Show each product and label shipped orders as 'complete', otherwise 'open'.", answer: "SELECT product, CASE WHEN status = 'shipped' THEN 'complete' ELSE 'open' END FROM orders;", expected: { select: ["product", "CASE WHEN status = 'shipped' THEN 'complete' ELSE 'open' END"], from: "orders", caseWhen: true } },
+    { title: "CASE salary band", table: "employees", prompt: "Show each employee and label salary at least 90000 as 'senior', otherwise 'standard'.", answer: "SELECT name, CASE WHEN salary >= 90000 THEN 'senior' ELSE 'standard' END FROM employees;", expected: { select: ["name", "CASE WHEN salary >= 90000 THEN 'senior' ELSE 'standard' END"], from: "employees", caseWhen: true } },
+    { title: "CASE product price band", table: "products", prompt: "Show each product and label price at least 500 as 'premium', otherwise 'standard'.", answer: "SELECT name, CASE WHEN price >= 500 THEN 'premium' ELSE 'standard' END FROM products;", expected: { select: ["name", "CASE WHEN price >= 500 THEN 'premium' ELSE 'standard' END"], from: "products", caseWhen: true } },
+    { title: "CASE subscription outcome", table: "subscriptions", prompt: "Show each customer ID and label active subscriptions as 'retained', otherwise 'churned'.", answer: "SELECT customer_id, CASE WHEN status = 'active' THEN 'retained' ELSE 'churned' END FROM subscriptions;", expected: { select: ["customer_id", "CASE WHEN status = 'active' THEN 'retained' ELSE 'churned' END"], from: "subscriptions", caseWhen: true } }
+  ],
+  "Subquery buyers": [
+    { title: "Subquery high spend buyers", prompt: "Show customer names for customers who have an order greater than 100.", answer: "SELECT name FROM customers WHERE id IN (SELECT customer_id FROM orders WHERE amount > 100);", expected: { select: ["name"], from: "customers", subqueryWhere: { column: "id", select: "customer_id", from: "orders", where: { column: "amount", operator: ">", value: 100 } } } },
+    { title: "Subquery shipped buyers", prompt: "Show customer names for customers who have a shipped order.", answer: "SELECT name FROM customers WHERE id IN (SELECT customer_id FROM orders WHERE status = 'shipped');", expected: { select: ["name"], from: "customers", subqueryWhere: { column: "id", select: "customer_id", from: "orders", where: { column: "status", operator: "=", value: "shipped" } } } },
+    { title: "Subquery low spend buyers", prompt: "Show customer names for customers who have an order less than 100.", answer: "SELECT name FROM customers WHERE id IN (SELECT customer_id FROM orders WHERE amount < 100);", expected: { select: ["name"], from: "customers", subqueryWhere: { column: "id", select: "customer_id", from: "orders", where: { column: "amount", operator: "<", value: 100 } } } },
+    { title: "Subquery active subscribers", tables: ["customers", "subscriptions"], prompt: "Show customer names for customers with active subscriptions.", answer: "SELECT name FROM customers WHERE id IN (SELECT customer_id FROM subscriptions WHERE status = 'active');", expected: { select: ["name"], from: "customers", subqueryWhere: { column: "id", select: "customer_id", from: "subscriptions", where: { column: "status", operator: "=", value: "active" } } } },
+    { title: "Subquery Pro subscribers", tables: ["customers", "subscriptions"], prompt: "Show customer names for customers with Pro subscriptions.", answer: "SELECT name FROM customers WHERE id IN (SELECT customer_id FROM subscriptions WHERE plan = 'Pro');", expected: { select: ["name"], from: "customers", subqueryWhere: { column: "id", select: "customer_id", from: "subscriptions", where: { column: "plan", operator: "=", value: "Pro" } } } }
+  ],
+  "CTE high orders": [
+    { title: "CTE high orders", prompt: "Use a CTE named high_orders to show products from orders greater than 100.", answer: "WITH high_orders AS (SELECT product, amount FROM orders WHERE amount > 100) SELECT product FROM high_orders;", expected: { select: ["product"], from: "high_orders", cte: { name: "high_orders", query: { select: ["product", "amount"], from: "orders", where: { column: "amount", operator: ">", value: 100 } } } } },
+    { title: "CTE shipped orders", prompt: "Use a CTE named shipped_orders to show products from shipped orders.", answer: "WITH shipped_orders AS (SELECT product, status FROM orders WHERE status = 'shipped') SELECT product FROM shipped_orders;", expected: { select: ["product"], from: "shipped_orders", cte: { name: "shipped_orders", query: { select: ["product", "status"], from: "orders", where: { column: "status", operator: "=", value: "shipped" } } } } },
+    { title: "CTE expensive products", table: "products", prompt: "Use a CTE named premium_products to show products priced above 400.", answer: "WITH premium_products AS (SELECT name, price FROM products WHERE price > 400) SELECT name FROM premium_products;", expected: { select: ["name"], from: "premium_products", cte: { name: "premium_products", query: { select: ["name", "price"], from: "products", where: { column: "price", operator: ">", value: 400 } } } } },
+    { title: "CTE active subscriptions", table: "subscriptions", prompt: "Use a CTE named active_subs to show customer IDs with active subscriptions.", answer: "WITH active_subs AS (SELECT customer_id, status FROM subscriptions WHERE status = 'active') SELECT customer_id FROM active_subs;", expected: { select: ["customer_id"], from: "active_subs", cte: { name: "active_subs", query: { select: ["customer_id", "status"], from: "subscriptions", where: { column: "status", operator: "=", value: "active" } } } } },
+    { title: "CTE long tickets", table: "tickets", prompt: "Use a CTE named long_tickets to show owners of tickets open over 5 days.", answer: "WITH long_tickets AS (SELECT owner, days_open FROM tickets WHERE days_open > 5) SELECT owner FROM long_tickets;", expected: { select: ["owner"], from: "long_tickets", cte: { name: "long_tickets", query: { select: ["owner", "days_open"], from: "tickets", where: { column: "days_open", operator: ">", value: 5 } } } } }
+  ],
+  "Join lookup": [
+    { title: "Join shipped products to customers", prompt: "Show each shipped order product with the customer's name.", answer: "SELECT orders.product, customers.name FROM orders JOIN customers ON orders.customer_id = customers.id WHERE orders.status = 'shipped';", expected: { select: ["orders.product", "customers.name"], from: "orders", join: { table: "customers", left: "orders.customer_id", right: "customers.id" }, where: { column: "orders.status", operator: "=", value: "shipped" } } },
+    { title: "Join shipped amounts to cities", prompt: "Show shipped order amounts with the customer's city.", answer: "SELECT orders.amount, customers.city FROM orders JOIN customers ON orders.customer_id = customers.id WHERE orders.status = 'shipped';", expected: { select: ["orders.amount", "customers.city"], from: "orders", join: { table: "customers", left: "orders.customer_id", right: "customers.id" }, where: { column: "orders.status", operator: "=", value: "shipped" } } },
+    { title: "Join pending products to customers", prompt: "Show pending order products with the customer's name.", answer: "SELECT orders.product, customers.name FROM orders JOIN customers ON orders.customer_id = customers.id WHERE orders.status = 'pending';", expected: { select: ["orders.product", "customers.name"], from: "orders", join: { table: "customers", left: "orders.customer_id", right: "customers.id" }, where: { column: "orders.status", operator: "=", value: "pending" } } }
+  ],
+  "Customer rank": [
+    { title: "Rank salary by department", prompt: "Show department, name, and salary rank within each department using ROW_NUMBER ordered by salary descending.", answer: "SELECT department, name, ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) FROM employees;", expected: { select: ["department", "name", "ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC)"], from: "employees", window: { function: "ROW_NUMBER", partitionBy: "department", orderBy: { column: "salary", direction: "DESC" } } } },
+    { title: "Rank salary low to high", prompt: "Show department, name, and salary rank within each department using ROW_NUMBER ordered by salary ascending.", answer: "SELECT department, name, ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary ASC) FROM employees;", expected: { select: ["department", "name", "ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary ASC)"], from: "employees", window: { function: "ROW_NUMBER", partitionBy: "department", orderBy: { column: "salary", direction: "ASC" } } } },
+    { title: "Rank orders by status", table: "orders", prompt: "Show status, product, and row number within each status ordered by amount descending.", answer: "SELECT status, product, ROW_NUMBER() OVER (PARTITION BY status ORDER BY amount DESC) FROM orders;", expected: { select: ["status", "product", "ROW_NUMBER() OVER (PARTITION BY status ORDER BY amount DESC)"], from: "orders", window: { function: "ROW_NUMBER", partitionBy: "status", orderBy: { column: "amount", direction: "DESC" } } } }
+  ],
+  "Churn count": [
+    { title: "Cancelled count by plan", prompt: "Count cancelled subscriptions by plan.", answer: "SELECT plan, COUNT(*) FROM subscriptions WHERE status = 'cancelled' GROUP BY plan;", expected: { select: ["plan", "COUNT(*)"], from: "subscriptions", where: { column: "status", operator: "=", value: "cancelled" }, groupBy: ["plan"] } },
+    { title: "Active count by plan", prompt: "Count active subscriptions by plan.", answer: "SELECT plan, COUNT(*) FROM subscriptions WHERE status = 'active' GROUP BY plan;", expected: { select: ["plan", "COUNT(*)"], from: "subscriptions", where: { column: "status", operator: "=", value: "active" }, groupBy: ["plan"] } },
+    { title: "Customer count by subscription status", prompt: "Count subscriptions by status.", answer: "SELECT status, COUNT(*) FROM subscriptions GROUP BY status;", expected: { select: ["status", "COUNT(*)"], from: "subscriptions", groupBy: ["status"] } }
+  ],
+  "Active segmentation": [
+    { title: "Segment retained customers", prompt: "Show each customer ID and label active subscriptions as 'retained', otherwise 'churned'.", answer: "SELECT customer_id, CASE WHEN status = 'active' THEN 'retained' ELSE 'churned' END FROM subscriptions;", expected: { select: ["customer_id", "CASE WHEN status = 'active' THEN 'retained' ELSE 'churned' END"], from: "subscriptions", caseWhen: true } },
+    { title: "Segment Pro plans", prompt: "Show each customer ID and label Pro subscriptions as 'pro', otherwise 'other'.", answer: "SELECT customer_id, CASE WHEN plan = 'Pro' THEN 'pro' ELSE 'other' END FROM subscriptions;", expected: { select: ["customer_id", "CASE WHEN plan = 'Pro' THEN 'pro' ELSE 'other' END"], from: "subscriptions", caseWhen: true } },
+    { title: "Segment January starts", prompt: "Show each customer ID and label January starts as 'jan_cohort', otherwise 'later'.", answer: "SELECT customer_id, CASE WHEN start_month = '2026-01' THEN 'jan_cohort' ELSE 'later' END FROM subscriptions;", expected: { select: ["customer_id", "CASE WHEN start_month = '2026-01' THEN 'jan_cohort' ELSE 'later' END"], from: "subscriptions", caseWhen: true } }
+  ]
+};
+
 const challenges = challengePlan.flatMap(({ difficulty, count }) => {
   const pool = templates.filter((template) => template.difficulty === difficulty);
   return Array.from({ length: count }, (_, index) => {
     const base = pool[index % pool.length];
     const round = Math.floor(index / pool.length) + 1;
-    return {
-      ...structuredClone(base),
-      title: `${base.title} ${round}`
-    };
+    return withVariant(base, round);
   });
 }).map((challenge, index) => ({
   ...challenge,
@@ -410,8 +541,17 @@ function parseSql(sql) {
   if (groupMatch) parsed.groupBy = splitColumns(groupMatch[1]);
 
   const orderSource = cleaned.replace(/over\s*\([^)]*\)/ig, "");
-  const orderMatch = orderSource.match(/\sorder\s+by\s+([a-z_][\w.]*)(?:\s+(asc|desc))?/i);
-  if (orderMatch) parsed.orderBy = { column: orderMatch[1], direction: (orderMatch[2] || "ASC").toUpperCase() };
+  const commaDirectionMatch = orderSource.match(/\sorder\s+by\s+([a-z_][\w.]*)\s*,\s*(asc|desc)\b/i);
+  if (commaDirectionMatch) {
+    parsed.orderBy = {
+      column: commaDirectionMatch[1],
+      direction: commaDirectionMatch[2].toUpperCase(),
+      commaBeforeDirection: true
+    };
+  } else {
+    const orderMatch = orderSource.match(/\sorder\s+by\s+([a-z_][\w.]*)(?:\s+(asc|desc))?/i);
+    if (orderMatch) parsed.orderBy = { column: orderMatch[1], direction: (orderMatch[2] || "ASC").toUpperCase() };
+  }
 
   const windowColumn = parsed.select.find((column) => /^row_number\(\)\s+over\s*\(/i.test(column));
   if (windowColumn) {
@@ -801,6 +941,9 @@ function diagnose(parsed, expected, resultMatches) {
   if (parsed.error) {
     return [{ type: "bad", title: "Syntax", text: parsed.error }];
   }
+  if (parsed.orderBy?.commaBeforeDirection) {
+    messages.push({ type: "bad", title: "ORDER BY syntax", text: `Remove the comma before ${parsed.orderBy.direction}. Use ORDER BY ${parsed.orderBy.column} ${parsed.orderBy.direction}.` });
+  }
 
   compareList("SELECT", parsed.select, expected.select, messages);
   if (normalizeIdentifier(parsed.from) !== normalizeIdentifier(expected.from)) {
@@ -864,7 +1007,7 @@ function diagnose(parsed, expected, resultMatches) {
       messages.push({ type: "bad", title: "ORDER BY", text: `Sort by ${expected.orderBy.column} ${expected.orderBy.direction}.` });
     } else {
       comparePart("ORDER BY column", parsed.orderBy.column, expected.orderBy.column, messages);
-      if (parsed.orderBy.direction !== expected.orderBy.direction) {
+      if (!parsed.orderBy.commaBeforeDirection && parsed.orderBy.direction !== expected.orderBy.direction) {
         messages.push({ type: "bad", title: "ORDER BY direction", text: `Use ${expected.orderBy.direction}, not ${parsed.orderBy.direction}.` });
       }
     }
@@ -876,6 +1019,10 @@ function diagnose(parsed, expected, resultMatches) {
     messages.push({ type: "warn", title: "Result mismatch", text: "The clauses look close, but the returned rows do not match the expected result." });
   }
   return messages;
+}
+
+function hasBlockingSyntaxIssue(parsed) {
+  return Boolean(parsed.error || parsed.orderBy?.commaBeforeDirection);
 }
 
 function comparePart(title, actual, expected, messages) {
@@ -993,7 +1140,7 @@ function runCurrentQuery() {
   try {
     if (!parsed.error) actual = evaluateQuery(parsed);
     const expected = evaluateQuery(challenge.expected);
-    resultMatches = sameResult(actual, expected);
+    resultMatches = sameResult(actual, expected) && !hasBlockingSyntaxIssue(parsed);
     messages = diagnose(parsed, challenge.expected, resultMatches);
   } catch (error) {
     messages = [{ type: "bad", title: "Runtime", text: error.message }];
@@ -1018,6 +1165,9 @@ function runCurrentQuery() {
   }
   el.feedback.className = "feedback";
   el.feedback.innerHTML = messages.map((message) => `<div class="feedback-item ${message.type}"><strong>${message.title}</strong>${escapeHtml(message.text)}</div>`).join("");
+  if (resultMatches) {
+    el.feedback.innerHTML += `<div class="feedback-actions"><button id="nextInlineBtn" type="button" class="next-question-button">Next Question &rarr;</button></div>`;
+  }
   renderStats();
   renderFilterStatus();
   renderChallengeList();
@@ -1084,6 +1234,9 @@ el.topicFilter.addEventListener("change", () => {
   ensureVisibleChallenge();
   renderChallenge();
   saveProgress();
+});
+el.feedback.addEventListener("click", (event) => {
+  if (event.target.closest("#nextInlineBtn")) move(1);
 });
 el.challengeList.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-index]");

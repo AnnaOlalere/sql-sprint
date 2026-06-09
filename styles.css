@@ -363,7 +363,7 @@ button {
   gap: 8px;
 }
 
-.icon-button,
+.nav-button,
 .primary-button,
 .secondary-button {
   border: 1px solid transparent;
@@ -371,12 +371,19 @@ button {
   min-height: 38px;
 }
 
-.icon-button {
-  width: 42px;
+.nav-button {
+  min-width: 116px;
+  padding: 0 14px;
   background: var(--panel);
   border-color: var(--line);
   color: var(--ink);
-  font-size: 19px;
+  font-weight: 800;
+}
+
+.primary-nav {
+  background: #101923;
+  border-color: #101923;
+  color: #ffffff;
 }
 
 .primary-button {
@@ -539,6 +546,23 @@ textarea:focus {
 .feedback-item strong {
   display: block;
   margin-bottom: 3px;
+}
+
+.feedback-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.next-question-button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 800;
 }
 
 .empty-state {
