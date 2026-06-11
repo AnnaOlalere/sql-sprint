@@ -25,8 +25,14 @@ No install step is required.
 - Tracks score, streak, accuracy, solved drills, and skill-area progress
 - Lets learners filter by topic, review missed questions, and read short explanations after correct answers
 - Prompts learners to move to the next question after a correct answer
+- Requires semicolons so learners practice ending SQL statements properly
 - Lets learners log in with email/password and resume progress with Supabase
 - Includes 100 varied drills from beginner to harder query patterns
+
+## Curriculum Split
+
+- Questions 1-16: SELECT, WHERE, and ORDER BY fundamentals
+- Questions 17-100: COUNT, GROUP BY, JOINs, CASE WHEN, subqueries, CTEs, window functions, and business-style SQL
 
 ## Progress Saving
 

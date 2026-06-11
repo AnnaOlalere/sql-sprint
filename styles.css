@@ -482,7 +482,7 @@ tr:last-child td {
 
 textarea {
   width: 100%;
-  min-height: 190px;
+  min-height: 138px;
   resize: vertical;
   padding: 14px;
   border: 1px solid var(--line);

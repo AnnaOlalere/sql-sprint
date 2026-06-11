@@ -269,9 +269,16 @@ const templates = [
 ];
 
 const challengePlan = [
-  { difficulty: "Easy", count: 35 },
-  { difficulty: "Medium", count: 45 },
-  { difficulty: "Hard", count: 20 }
+  { skill: "SELECT", count: 4 },
+  { skill: "WHERE", count: 8 },
+  { skill: "ORDER", count: 4 },
+  { skill: "COUNT", count: 8 },
+  { skill: "GROUP", count: 14 },
+  { skill: "JOIN", count: 14 },
+  { skill: "CASE", count: 14 },
+  { skill: "SUBQUERY", count: 12 },
+  { skill: "CTE", count: 12 },
+  { skill: "WINDOW", count: 10 }
 ];
 
 function withVariant(base, round) {
@@ -408,8 +415,8 @@ const challengeVariants = {
   ]
 };
 
-const challenges = challengePlan.flatMap(({ difficulty, count }) => {
-  const pool = templates.filter((template) => template.difficulty === difficulty);
+const challenges = challengePlan.flatMap(({ skill, count }) => {
+  const pool = templates.filter((template) => template.skill === skill);
   return Array.from({ length: count }, (_, index) => {
     const base = pool[index % pool.length];
     const round = Math.floor(index / pool.length) + 1;
@@ -484,13 +491,17 @@ function splitColumns(value) {
   return columns;
 }
 
-function parseSql(sql) {
-  const cleaned = sql.trim().replace(/;$/, "").replace(/\s+/g, " ");
+function parseSql(sql, requireSemicolon = true) {
+  const rawSql = sql.trim();
+  if (requireSemicolon && rawSql && !rawSql.endsWith(";")) {
+    return { error: "Add a semicolon at the end of the query." };
+  }
+  const cleaned = rawSql.replace(/;$/, "").replace(/\s+/g, " ");
   const cteMatch = cleaned.match(/^with\s+([a-z_][\w]*)\s+as\s*\((select\s+.+)\)\s+(select\s+.+)$/i);
   if (cteMatch) {
-    const parsed = parseSql(cteMatch[3]);
+    const parsed = parseSql(cteMatch[3], false);
     if (!parsed.error) {
-      parsed.cte = { name: cteMatch[1], query: parseSql(cteMatch[2]) };
+      parsed.cte = { name: cteMatch[1], query: parseSql(cteMatch[2], false) };
     }
     return parsed;
   }
@@ -1037,10 +1048,18 @@ function compareList(title, actual, expected, messages) {
   const missing = expected.filter((column) => !actualSet.includes(normalizeIdentifier(column)));
   const extra = actual.filter((column) => !expectedSet.includes(normalizeIdentifier(column)));
   if (missing.length || extra.length) {
+    if (missing.length === 1 && extra.length === 1 && normalizeIdentifier(extra[0]).replace(/s$/, "") === normalizeIdentifier(missing[0])) {
+      messages.push({
+        type: "bad",
+        title,
+        text: `Use ${missing[0]}, not ${extra[0]}. The column name is singular, so remove the extra S.`
+      });
+      return;
+    }
     const parts = [];
-    if (missing.length) parts.push(`missing ${missing.join(", ")}`);
-    if (extra.length) parts.push(`extra ${extra.join(", ")}`);
-    messages.push({ type: "bad", title, text: parts.join("; ") });
+    if (missing.length) parts.push(`Expected: ${missing.join(", ")}`);
+    if (extra.length) parts.push(`Not in the expected answer: ${extra.join(", ")}`);
+    messages.push({ type: "bad", title, text: parts.join(". ") });
   }
 }
 
