@@ -37,10 +37,46 @@ const BASE_TABLES = {
     { id: 3, customer_id: 3, plan: "Pro", status: "active", start_month: "2026-02", end_month: "" },
     { id: 4, customer_id: 4, plan: "Basic", status: "cancelled", start_month: "2026-02", end_month: "2026-04" },
     { id: 5, customer_id: 1, plan: "Team", status: "active", start_month: "2026-03", end_month: "" }
+  ],
+  invoices: [
+    { id: 1, customer_id: 1, invoice_month: "2026-01", revenue: 1200, paid_at: "2026-01-10" },
+    { id: 2, customer_id: 2, invoice_month: "2026-01", revenue: 25, paid_at: "" },
+    { id: 3, customer_id: 1, invoice_month: "2026-02", revenue: 75, paid_at: "2026-02-12" },
+    { id: 4, customer_id: 3, invoice_month: "2026-02", revenue: 240, paid_at: "2026-02-15" },
+    { id: 5, customer_id: 4, invoice_month: "2026-03", revenue: 410, paid_at: "" }
+  ],
+  events: [
+    { id: 1, user_id: 1, event_name: "signup", event_date: "2026-01-01", channel: "search" },
+    { id: 2, user_id: 1, event_name: "purchase", event_date: "2026-01-03", channel: "search" },
+    { id: 3, user_id: 2, event_name: "signup", event_date: "2026-01-04", channel: "social" },
+    { id: 4, user_id: 3, event_name: "signup", event_date: "2026-02-01", channel: "email" },
+    { id: 5, user_id: 3, event_name: "purchase", event_date: "2026-02-07", channel: "email" },
+    { id: 6, user_id: 4, event_name: "signup", event_date: "2026-03-10", channel: "" }
   ]
 };
 
-const SKILLS = ["SELECT", "WHERE", "ORDER", "COUNT", "GROUP", "JOIN", "CASE", "SUBQUERY", "CTE", "WINDOW"];
+const TOTAL_QUESTIONS = 150;
+const SKILLS = [
+  "SELECT",
+  "WHERE",
+  "ORDER",
+  "DISTINCT",
+  "ALIAS",
+  "LIMIT",
+  "LOGIC",
+  "COUNT",
+  "GROUP",
+  "HAVING",
+  "JOIN",
+  "CASE",
+  "SUBQUERY",
+  "CTE",
+  "WINDOW",
+  "DATES",
+  "CLEANING",
+  "NULLS",
+  "KPI"
+];
 const STORAGE_PREFIX = "sql-sprint-profile:";
 const LAST_PROFILE_KEY = "sql-sprint-last-profile";
 const SUPABASE_SETTINGS = window.SQL_SPRINT_SUPABASE || {};
@@ -265,20 +301,119 @@ const templates = [
     prompt: "Show each customer ID and label active subscriptions as 'retained', otherwise 'churned'.",
     answer: "SELECT customer_id, CASE WHEN status = 'active' THEN 'retained' ELSE 'churned' END FROM subscriptions;",
     expected: { select: ["customer_id", "CASE WHEN status = 'active' THEN 'retained' ELSE 'churned' END"], from: "subscriptions", caseWhen: true }
+  },
+  {
+    title: "Distinct cities",
+    difficulty: "Easy",
+    skill: "DISTINCT",
+    table: "customers",
+    prompt: "Show each city only once.",
+    answer: "SELECT DISTINCT city FROM customers;",
+    expected: { select: ["city"], from: "customers", distinct: true }
+  },
+  {
+    title: "Alias customer names",
+    difficulty: "Easy",
+    skill: "ALIAS",
+    table: "customers",
+    prompt: "Show customer names as customer_name.",
+    answer: "SELECT name AS customer_name FROM customers;",
+    expected: { select: ["name"], from: "customers", aliases: { name: "customer_name" } }
+  },
+  {
+    title: "Limit expensive orders",
+    difficulty: "Easy",
+    skill: "LIMIT",
+    table: "orders",
+    prompt: "Show the top 2 order products by amount.",
+    answer: "SELECT product FROM orders ORDER BY amount DESC LIMIT 2;",
+    expected: { select: ["product"], from: "orders", orderBy: { column: "amount", direction: "DESC" }, limit: 2 }
+  },
+  {
+    title: "Logic filters",
+    difficulty: "Easy",
+    skill: "LOGIC",
+    table: "orders",
+    prompt: "Show products from shipped orders with amount greater than 100.",
+    answer: "SELECT product FROM orders WHERE status = 'shipped' AND amount > 100;",
+    expected: { select: ["product"], from: "orders", whereAll: [{ column: "status", operator: "=", value: "shipped" }, { column: "amount", operator: ">", value: 100 }] }
+  },
+  {
+    title: "Having departments",
+    difficulty: "Medium",
+    skill: "HAVING",
+    table: "employees",
+    prompt: "Show departments with more than 1 employee.",
+    answer: "SELECT department, COUNT(*) FROM employees GROUP BY department HAVING COUNT(*) > 1;",
+    expected: { select: ["department", "COUNT(*)"], from: "employees", groupBy: ["department"], having: { aggregate: "COUNT(*)", operator: ">", value: 1 } }
+  },
+  {
+    title: "Left join customers",
+    difficulty: "Medium",
+    skill: "JOIN",
+    tables: ["customers", "orders"],
+    prompt: "Show every customer name with any matching order product.",
+    answer: "SELECT customers.name, orders.product FROM customers LEFT JOIN orders ON customers.id = orders.customer_id;",
+    expected: { select: ["customers.name", "orders.product"], from: "customers", join: { type: "LEFT", table: "orders", left: "customers.id", right: "orders.customer_id" } }
+  },
+  {
+    title: "Date invoices",
+    difficulty: "Hard",
+    skill: "DATES",
+    table: "invoices",
+    prompt: "Show invoice IDs for invoices in February 2026.",
+    answer: "SELECT id FROM invoices WHERE invoice_month = '2026-02';",
+    expected: { select: ["id"], from: "invoices", where: { column: "invoice_month", operator: "=", value: "2026-02" } }
+  },
+  {
+    title: "Clean missing channels",
+    difficulty: "Hard",
+    skill: "CLEANING",
+    table: "events",
+    prompt: "Show each event ID and replace blank channel values with 'unknown'.",
+    answer: "SELECT id, COALESCE(channel, 'unknown') FROM events;",
+    expected: { select: ["id", "COALESCE(channel, 'unknown')"], from: "events" }
+  },
+  {
+    title: "Null unpaid invoices",
+    difficulty: "Hard",
+    skill: "NULLS",
+    table: "invoices",
+    prompt: "Show invoice IDs where paid_at is blank.",
+    answer: "SELECT id FROM invoices WHERE paid_at IS NULL;",
+    expected: { select: ["id"], from: "invoices", whereNull: { column: "paid_at" } }
+  },
+  {
+    title: "KPI monthly revenue",
+    difficulty: "Hard",
+    skill: "KPI",
+    table: "invoices",
+    prompt: "Show each invoice month and total revenue.",
+    answer: "SELECT invoice_month, SUM(revenue) FROM invoices GROUP BY invoice_month;",
+    expected: { select: ["invoice_month", "SUM(revenue)"], from: "invoices", groupBy: ["invoice_month"] }
   }
 ];
 
 const challengePlan = [
-  { skill: "SELECT", count: 4 },
-  { skill: "WHERE", count: 8 },
+  { skill: "SELECT", count: 5 },
+  { skill: "WHERE", count: 7 },
   { skill: "ORDER", count: 4 },
-  { skill: "COUNT", count: 8 },
-  { skill: "GROUP", count: 14 },
-  { skill: "JOIN", count: 14 },
-  { skill: "CASE", count: 14 },
-  { skill: "SUBQUERY", count: 12 },
-  { skill: "CTE", count: 12 },
-  { skill: "WINDOW", count: 10 }
+  { skill: "DISTINCT", count: 4 },
+  { skill: "ALIAS", count: 3 },
+  { skill: "LIMIT", count: 3 },
+  { skill: "LOGIC", count: 4 },
+  { skill: "COUNT", count: 5 },
+  { skill: "GROUP", count: 7 },
+  { skill: "HAVING", count: 3 },
+  { skill: "JOIN", count: 20 },
+  { skill: "CASE", count: 15 },
+  { skill: "SUBQUERY", count: 8 },
+  { skill: "CTE", count: 7 },
+  { skill: "WINDOW", count: 20 },
+  { skill: "CLEANING", count: 5 },
+  { skill: "DATES", count: 5 },
+  { skill: "NULLS", count: 5 },
+  { skill: "KPI", count: 20 }
 ];
 
 function withVariant(base, round) {
@@ -288,6 +423,38 @@ function withVariant(base, round) {
 }
 
 const challengeVariants = {
+  "Distinct cities": [
+    { title: "Distinct customer cities", prompt: "Show each city only once.", answer: "SELECT DISTINCT city FROM customers;", expected: { select: ["city"], from: "customers", distinct: true } },
+    { title: "Distinct customer tiers", prompt: "Show each customer tier only once.", answer: "SELECT DISTINCT tier FROM customers;", expected: { select: ["tier"], from: "customers", distinct: true } },
+    { title: "Distinct order statuses", table: "orders", prompt: "Show each order status only once.", answer: "SELECT DISTINCT status FROM orders;", expected: { select: ["status"], from: "orders", distinct: true } },
+    { title: "Distinct product categories", table: "products", prompt: "Show each product category only once.", answer: "SELECT DISTINCT category FROM products;", expected: { select: ["category"], from: "products", distinct: true } }
+  ],
+  "Alias customer names": [
+    { title: "Alias customer names", prompt: "Show customer names as customer_name.", answer: "SELECT name AS customer_name FROM customers;", expected: { select: ["name"], from: "customers", aliases: { name: "customer_name" } } },
+    { title: "Alias order amount", table: "orders", prompt: "Show order amounts as order_value.", answer: "SELECT amount AS order_value FROM orders;", expected: { select: ["amount"], from: "orders", aliases: { amount: "order_value" } } },
+    { title: "Alias product price", table: "products", prompt: "Show product prices as list_price.", answer: "SELECT price AS list_price FROM products;", expected: { select: ["price"], from: "products", aliases: { price: "list_price" } } }
+  ],
+  "Limit expensive orders": [
+    { title: "Limit top order products", prompt: "Show the top 2 order products by amount.", answer: "SELECT product FROM orders ORDER BY amount DESC LIMIT 2;", expected: { select: ["product"], from: "orders", orderBy: { column: "amount", direction: "DESC" }, limit: 2 } },
+    { title: "Limit top product prices", table: "products", prompt: "Show the 2 most expensive product names.", answer: "SELECT name FROM products ORDER BY price DESC LIMIT 2;", expected: { select: ["name"], from: "products", orderBy: { column: "price", direction: "DESC" }, limit: 2 } },
+    { title: "Limit oldest tickets", table: "tickets", prompt: "Show the 2 ticket owners with the most days open.", answer: "SELECT owner FROM tickets ORDER BY days_open DESC LIMIT 2;", expected: { select: ["owner"], from: "tickets", orderBy: { column: "days_open", direction: "DESC" }, limit: 2 } }
+  ],
+  "Logic filters": [
+    { title: "AND shipped large orders", prompt: "Show products from shipped orders with amount greater than 100.", answer: "SELECT product FROM orders WHERE status = 'shipped' AND amount > 100;", expected: { select: ["product"], from: "orders", whereAll: [{ column: "status", operator: "=", value: "shipped" }, { column: "amount", operator: ">", value: 100 }] } },
+    { title: "AND Gold Boston customers", table: "customers", prompt: "Show names of Gold customers in Boston.", answer: "SELECT name FROM customers WHERE tier = 'Gold' AND city = 'Boston';", expected: { select: ["name"], from: "customers", whereAll: [{ column: "tier", operator: "=", value: "Gold" }, { column: "city", operator: "=", value: "Boston" }] } },
+    { title: "OR high or medium tickets", table: "tickets", prompt: "Show owners of high or medium priority tickets.", answer: "SELECT owner FROM tickets WHERE priority = 'high' OR priority = 'medium';", expected: { select: ["owner"], from: "tickets", whereAny: [{ column: "priority", operator: "=", value: "high" }, { column: "priority", operator: "=", value: "medium" }] } },
+    { title: "OR active or Team subscriptions", table: "subscriptions", prompt: "Show customer IDs for active subscriptions or Team plan subscriptions.", answer: "SELECT customer_id FROM subscriptions WHERE status = 'active' OR plan = 'Team';", expected: { select: ["customer_id"], from: "subscriptions", whereAny: [{ column: "status", operator: "=", value: "active" }, { column: "plan", operator: "=", value: "Team" }] } }
+  ],
+  "Having departments": [
+    { title: "Departments with multiple employees", prompt: "Show departments with more than 1 employee.", answer: "SELECT department, COUNT(*) FROM employees GROUP BY department HAVING COUNT(*) > 1;", expected: { select: ["department", "COUNT(*)"], from: "employees", groupBy: ["department"], having: { aggregate: "COUNT(*)", operator: ">", value: 1 } } },
+    { title: "Customers with multiple orders", table: "orders", prompt: "Show customer IDs with more than 1 order.", answer: "SELECT customer_id, COUNT(*) FROM orders GROUP BY customer_id HAVING COUNT(*) > 1;", expected: { select: ["customer_id", "COUNT(*)"], from: "orders", groupBy: ["customer_id"], having: { aggregate: "COUNT(*)", operator: ">", value: 1 } } },
+    { title: "Plans with multiple subscriptions", table: "subscriptions", prompt: "Show plans with more than 1 subscription.", answer: "SELECT plan, COUNT(*) FROM subscriptions GROUP BY plan HAVING COUNT(*) > 1;", expected: { select: ["plan", "COUNT(*)"], from: "subscriptions", groupBy: ["plan"], having: { aggregate: "COUNT(*)", operator: ">", value: 1 } } }
+  ],
+  "Left join customers": [
+    { title: "Left join customers to orders", prompt: "Show every customer name with any matching order product.", answer: "SELECT customers.name, orders.product FROM customers LEFT JOIN orders ON customers.id = orders.customer_id;", expected: { select: ["customers.name", "orders.product"], from: "customers", join: { type: "LEFT", table: "orders", left: "customers.id", right: "orders.customer_id" } } },
+    { title: "Left join customers to subscriptions", tables: ["customers", "subscriptions"], prompt: "Show every customer name with any matching subscription plan.", answer: "SELECT customers.name, subscriptions.plan FROM customers LEFT JOIN subscriptions ON customers.id = subscriptions.customer_id;", expected: { select: ["customers.name", "subscriptions.plan"], from: "customers", join: { type: "LEFT", table: "subscriptions", left: "customers.id", right: "subscriptions.customer_id" } } },
+    { title: "Left join customers to invoices", tables: ["customers", "invoices"], prompt: "Show every customer name with any matching invoice revenue.", answer: "SELECT customers.name, invoices.revenue FROM customers LEFT JOIN invoices ON customers.id = invoices.customer_id;", expected: { select: ["customers.name", "invoices.revenue"], from: "customers", join: { type: "LEFT", table: "invoices", left: "customers.id", right: "invoices.customer_id" } } }
+  ],
   "Choose a column": [
     { title: "Choose customer names", prompt: "Show every customer's name.", answer: "SELECT name FROM customers;", expected: { select: ["name"], from: "customers" } },
     { title: "Choose customer cities", prompt: "Show every customer's city.", answer: "SELECT city FROM customers;", expected: { select: ["city"], from: "customers" } },
@@ -401,7 +568,10 @@ const challengeVariants = {
   "Customer rank": [
     { title: "Rank salary by department", prompt: "Show department, name, and salary rank within each department using ROW_NUMBER ordered by salary descending.", answer: "SELECT department, name, ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) FROM employees;", expected: { select: ["department", "name", "ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC)"], from: "employees", window: { function: "ROW_NUMBER", partitionBy: "department", orderBy: { column: "salary", direction: "DESC" } } } },
     { title: "Rank salary low to high", prompt: "Show department, name, and salary rank within each department using ROW_NUMBER ordered by salary ascending.", answer: "SELECT department, name, ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary ASC) FROM employees;", expected: { select: ["department", "name", "ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary ASC)"], from: "employees", window: { function: "ROW_NUMBER", partitionBy: "department", orderBy: { column: "salary", direction: "ASC" } } } },
-    { title: "Rank orders by status", table: "orders", prompt: "Show status, product, and row number within each status ordered by amount descending.", answer: "SELECT status, product, ROW_NUMBER() OVER (PARTITION BY status ORDER BY amount DESC) FROM orders;", expected: { select: ["status", "product", "ROW_NUMBER() OVER (PARTITION BY status ORDER BY amount DESC)"], from: "orders", window: { function: "ROW_NUMBER", partitionBy: "status", orderBy: { column: "amount", direction: "DESC" } } } }
+    { title: "Rank orders by status", table: "orders", prompt: "Show status, product, and row number within each status ordered by amount descending.", answer: "SELECT status, product, ROW_NUMBER() OVER (PARTITION BY status ORDER BY amount DESC) FROM orders;", expected: { select: ["status", "product", "ROW_NUMBER() OVER (PARTITION BY status ORDER BY amount DESC)"], from: "orders", window: { function: "ROW_NUMBER", partitionBy: "status", orderBy: { column: "amount", direction: "DESC" } } } },
+    { title: "RANK salaries by department", prompt: "Show department, name, and salary rank using RANK within each department.", answer: "SELECT department, name, RANK() OVER (PARTITION BY department ORDER BY salary DESC) FROM employees;", expected: { select: ["department", "name", "RANK() OVER (PARTITION BY department ORDER BY salary DESC)"], from: "employees", window: { function: "RANK", partitionBy: "department", orderBy: { column: "salary", direction: "DESC" } } } },
+    { title: "LAG monthly revenue", table: "invoices", prompt: "Show customer ID, invoice month, and previous revenue by customer.", answer: "SELECT customer_id, invoice_month, LAG(revenue) OVER (PARTITION BY customer_id ORDER BY invoice_month ASC) FROM invoices;", expected: { select: ["customer_id", "invoice_month", "LAG(revenue) OVER (PARTITION BY customer_id ORDER BY invoice_month ASC)"], from: "invoices", window: { function: "LAG", valueColumn: "revenue", partitionBy: "customer_id", orderBy: { column: "invoice_month", direction: "ASC" } } } },
+    { title: "LEAD monthly revenue", table: "invoices", prompt: "Show customer ID, invoice month, and next revenue by customer.", answer: "SELECT customer_id, invoice_month, LEAD(revenue) OVER (PARTITION BY customer_id ORDER BY invoice_month ASC) FROM invoices;", expected: { select: ["customer_id", "invoice_month", "LEAD(revenue) OVER (PARTITION BY customer_id ORDER BY invoice_month ASC)"], from: "invoices", window: { function: "LEAD", valueColumn: "revenue", partitionBy: "customer_id", orderBy: { column: "invoice_month", direction: "ASC" } } } }
   ],
   "Churn count": [
     { title: "Cancelled count by plan", prompt: "Count cancelled subscriptions by plan.", answer: "SELECT plan, COUNT(*) FROM subscriptions WHERE status = 'cancelled' GROUP BY plan;", expected: { select: ["plan", "COUNT(*)"], from: "subscriptions", where: { column: "status", operator: "=", value: "cancelled" }, groupBy: ["plan"] } },
@@ -412,6 +582,34 @@ const challengeVariants = {
     { title: "Segment retained customers", prompt: "Show each customer ID and label active subscriptions as 'retained', otherwise 'churned'.", answer: "SELECT customer_id, CASE WHEN status = 'active' THEN 'retained' ELSE 'churned' END FROM subscriptions;", expected: { select: ["customer_id", "CASE WHEN status = 'active' THEN 'retained' ELSE 'churned' END"], from: "subscriptions", caseWhen: true } },
     { title: "Segment Pro plans", prompt: "Show each customer ID and label Pro subscriptions as 'pro', otherwise 'other'.", answer: "SELECT customer_id, CASE WHEN plan = 'Pro' THEN 'pro' ELSE 'other' END FROM subscriptions;", expected: { select: ["customer_id", "CASE WHEN plan = 'Pro' THEN 'pro' ELSE 'other' END"], from: "subscriptions", caseWhen: true } },
     { title: "Segment January starts", prompt: "Show each customer ID and label January starts as 'jan_cohort', otherwise 'later'.", answer: "SELECT customer_id, CASE WHEN start_month = '2026-01' THEN 'jan_cohort' ELSE 'later' END FROM subscriptions;", expected: { select: ["customer_id", "CASE WHEN start_month = '2026-01' THEN 'jan_cohort' ELSE 'later' END"], from: "subscriptions", caseWhen: true } }
+  ],
+  "Date invoices": [
+    { title: "February invoices", prompt: "Show invoice IDs for invoices in February 2026.", answer: "SELECT id FROM invoices WHERE invoice_month = '2026-02';", expected: { select: ["id"], from: "invoices", where: { column: "invoice_month", operator: "=", value: "2026-02" } } },
+    { title: "January invoices", prompt: "Show invoice IDs for invoices in January 2026.", answer: "SELECT id FROM invoices WHERE invoice_month = '2026-01';", expected: { select: ["id"], from: "invoices", where: { column: "invoice_month", operator: "=", value: "2026-01" } } },
+    { title: "March invoices", prompt: "Show invoice IDs for invoices in March 2026.", answer: "SELECT id FROM invoices WHERE invoice_month = '2026-03';", expected: { select: ["id"], from: "invoices", where: { column: "invoice_month", operator: "=", value: "2026-03" } } },
+    { title: "February events", table: "events", prompt: "Show event IDs for events on 2026-02-01.", answer: "SELECT id FROM events WHERE event_date = '2026-02-01';", expected: { select: ["id"], from: "events", where: { column: "event_date", operator: "=", value: "2026-02-01" } } },
+    { title: "January subscription starts", table: "subscriptions", prompt: "Show customer IDs for subscriptions that started in January 2026.", answer: "SELECT customer_id FROM subscriptions WHERE start_month = '2026-01';", expected: { select: ["customer_id"], from: "subscriptions", where: { column: "start_month", operator: "=", value: "2026-01" } } }
+  ],
+  "Clean missing channels": [
+    { title: "Clean missing channels", prompt: "Show each event ID and replace blank channel values with 'unknown'.", answer: "SELECT id, COALESCE(channel, 'unknown') FROM events;", expected: { select: ["id", "COALESCE(channel, 'unknown')"], from: "events" } },
+    { title: "Clean unpaid dates", table: "invoices", prompt: "Show each invoice ID and replace blank paid_at values with 'unpaid'.", answer: "SELECT id, COALESCE(paid_at, 'unpaid') FROM invoices;", expected: { select: ["id", "COALESCE(paid_at, 'unpaid')"], from: "invoices" } },
+    { title: "Clean subscription end month", table: "subscriptions", prompt: "Show each customer ID and replace blank end_month values with 'active'.", answer: "SELECT customer_id, COALESCE(end_month, 'active') FROM subscriptions;", expected: { select: ["customer_id", "COALESCE(end_month, 'active')"], from: "subscriptions" } },
+    { title: "Clean event channel label", prompt: "Show event names and replace blank channel values with 'direct'.", answer: "SELECT event_name, COALESCE(channel, 'direct') FROM events;", expected: { select: ["event_name", "COALESCE(channel, 'direct')"], from: "events" } },
+    { title: "Clean invoice paid status", table: "invoices", prompt: "Show customer IDs and replace blank paid_at values with 'not_paid'.", answer: "SELECT customer_id, COALESCE(paid_at, 'not_paid') FROM invoices;", expected: { select: ["customer_id", "COALESCE(paid_at, 'not_paid')"], from: "invoices" } }
+  ],
+  "Null unpaid invoices": [
+    { title: "Find unpaid invoices", prompt: "Show invoice IDs where paid_at is blank.", answer: "SELECT id FROM invoices WHERE paid_at IS NULL;", expected: { select: ["id"], from: "invoices", whereNull: { column: "paid_at" } } },
+    { title: "Find missing channels", table: "events", prompt: "Show event IDs where channel is blank.", answer: "SELECT id FROM events WHERE channel IS NULL;", expected: { select: ["id"], from: "events", whereNull: { column: "channel" } } },
+    { title: "Find active end dates", table: "subscriptions", prompt: "Show customer IDs where end_month is blank.", answer: "SELECT customer_id FROM subscriptions WHERE end_month IS NULL;", expected: { select: ["customer_id"], from: "subscriptions", whereNull: { column: "end_month" } } },
+    { title: "Find unpaid customer IDs", table: "invoices", prompt: "Show customer IDs for invoices where paid_at is blank.", answer: "SELECT customer_id FROM invoices WHERE paid_at IS NULL;", expected: { select: ["customer_id"], from: "invoices", whereNull: { column: "paid_at" } } },
+    { title: "Find direct events", table: "events", prompt: "Show event names where channel is blank.", answer: "SELECT event_name FROM events WHERE channel IS NULL;", expected: { select: ["event_name"], from: "events", whereNull: { column: "channel" } } }
+  ],
+  "KPI monthly revenue": [
+    { title: "Monthly revenue", prompt: "Show each invoice month and total revenue.", answer: "SELECT invoice_month, SUM(revenue) FROM invoices GROUP BY invoice_month;", expected: { select: ["invoice_month", "SUM(revenue)"], from: "invoices", groupBy: ["invoice_month"] } },
+    { title: "Monthly paying customers", prompt: "Show each invoice month and count distinct customers.", answer: "SELECT invoice_month, COUNT(DISTINCT customer_id) FROM invoices GROUP BY invoice_month;", expected: { select: ["invoice_month", "COUNT(DISTINCT customer_id)"], from: "invoices", groupBy: ["invoice_month"] } },
+    { title: "Active subscriptions by plan", table: "subscriptions", prompt: "Show each plan and active subscription count.", answer: "SELECT plan, COUNT(*) FROM subscriptions WHERE status = 'active' GROUP BY plan;", expected: { select: ["plan", "COUNT(*)"], from: "subscriptions", where: { column: "status", operator: "=", value: "active" }, groupBy: ["plan"] } },
+    { title: "Churned subscriptions by plan", table: "subscriptions", prompt: "Show each plan and cancelled subscription count.", answer: "SELECT plan, COUNT(*) FROM subscriptions WHERE status = 'cancelled' GROUP BY plan;", expected: { select: ["plan", "COUNT(*)"], from: "subscriptions", where: { column: "status", operator: "=", value: "cancelled" }, groupBy: ["plan"] } },
+    { title: "Signup channels", table: "events", prompt: "Show each channel and signup count.", answer: "SELECT channel, COUNT(*) FROM events WHERE event_name = 'signup' GROUP BY channel;", expected: { select: ["channel", "COUNT(*)"], from: "events", where: { column: "event_name", operator: "=", value: "signup" }, groupBy: ["channel"] } }
   ]
 };
 
@@ -425,7 +623,7 @@ const challenges = challengePlan.flatMap(({ skill, count }) => {
 }).map((challenge, index) => ({
   ...challenge,
   id: index + 1,
-  prompt: `${challenge.prompt} (${index + 1}/100)`
+  prompt: `${challenge.prompt} (${index + 1}/${TOTAL_QUESTIONS})`
 }));
 
 const el = {
@@ -513,13 +711,20 @@ function parseSql(sql, requireSemicolon = true) {
 
   const parsed = {
     raw: cleaned,
-    select: splitColumns(selectMatch[1]).map((item) => item.replace(/\s+as\s+.+$/i, "")),
+    select: splitColumns(selectMatch[1]).map((item) => item.replace(/^distinct\s+/i, "").replace(/\s+as\s+.+$/i, "")),
     from: selectMatch[2]
   };
+  parsed.distinct = /^distinct\s+/i.test(selectMatch[1].trim());
+  parsed.aliases = Object.fromEntries(
+    splitColumns(selectMatch[1])
+      .map((item) => item.match(/^(.+?)\s+as\s+([a-z_][\w]*)$/i))
+      .filter(Boolean)
+      .map((match) => [match[1].replace(/^distinct\s+/i, "").trim(), match[2]])
+  );
 
-  const joinMatch = cleaned.match(/\sjoin\s+([a-z_][\w.]*)\s+on\s+([a-z_][\w.]*?)\s*=\s*([a-z_][\w.]*)/i);
+  const joinMatch = cleaned.match(/\s(?:(left)\s+)?join\s+([a-z_][\w.]*)\s+on\s+([a-z_][\w.]*?)\s*=\s*([a-z_][\w.]*)/i);
   if (joinMatch) {
-    parsed.join = { table: joinMatch[1], left: joinMatch[2], right: joinMatch[3] };
+    parsed.join = { type: joinMatch[1]?.toUpperCase() || "INNER", table: joinMatch[2], left: joinMatch[3], right: joinMatch[4] };
   }
 
   const whereMatch = cleaned.match(/\swhere\s+([a-z_][\w.]*)\s*(=|!=|<>|>=|<=|>|<)\s*('[^']*'|"[^"]*"|[\w.]+)/i);
@@ -529,6 +734,23 @@ function parseSql(sql, requireSemicolon = true) {
       operator: whereMatch[2] === "<>" ? "!=" : whereMatch[2],
       value: normalizeValue(whereMatch[3])
     };
+  }
+
+  const nullMatch = cleaned.match(/\swhere\s+([a-z_][\w.]*)\s+is\s+null\b/i);
+  if (nullMatch) {
+    parsed.where = null;
+    parsed.whereNull = { column: nullMatch[1] };
+  }
+
+  const logicMatch = cleaned.match(/\swhere\s+([a-z_][\w.]*)\s*(=|!=|<>|>=|<=|>|<)\s*('[^']*'|"[^"]*"|[\w.]+)\s+(and|or)\s+([a-z_][\w.]*)\s*(=|!=|<>|>=|<=|>|<)\s*('[^']*'|"[^"]*"|[\w.]+)/i);
+  if (logicMatch) {
+    parsed.where = null;
+    const conditions = [
+      { column: logicMatch[1], operator: logicMatch[2] === "<>" ? "!=" : logicMatch[2], value: normalizeValue(logicMatch[3]) },
+      { column: logicMatch[5], operator: logicMatch[6] === "<>" ? "!=" : logicMatch[6], value: normalizeValue(logicMatch[7]) }
+    ];
+    if (logicMatch[4].toLowerCase() === "and") parsed.whereAll = conditions;
+    else parsed.whereAny = conditions;
   }
 
   const subqueryMatch = cleaned.match(/\swhere\s+([a-z_][\w.]*)\s+in\s*\(\s*select\s+([a-z_][\w.]*)\s+from\s+([a-z_][\w.]*)(?:\s+where\s+([a-z_][\w.]*)\s*(=|!=|<>|>=|<=|>|<)\s*('[^']*'|"[^"]*"|[\w.]+))?\s*\)/i);
@@ -548,8 +770,17 @@ function parseSql(sql, requireSemicolon = true) {
     }
   }
 
-  const groupMatch = cleaned.match(/\sgroup\s+by\s+(.+?)(\s+order\s+by|\s+limit|$)/i);
+  const groupMatch = cleaned.match(/\sgroup\s+by\s+(.+?)(\s+having|\s+order\s+by|\s+limit|$)/i);
   if (groupMatch) parsed.groupBy = splitColumns(groupMatch[1]);
+
+  const havingMatch = cleaned.match(/\shaving\s+((?:count\(\*\)|sum\([a-z_][\w.]*\)|avg\([a-z_][\w.]*\)|max\([a-z_][\w.]*\)))\s*(=|!=|<>|>=|<=|>|<)\s*([\w.]+)/i);
+  if (havingMatch) {
+    parsed.having = {
+      aggregate: havingMatch[1],
+      operator: havingMatch[2] === "<>" ? "!=" : havingMatch[2],
+      value: normalizeValue(havingMatch[3])
+    };
+  }
 
   const orderSource = cleaned.replace(/over\s*\([^)]*\)/ig, "");
   const commaDirectionMatch = orderSource.match(/\sorder\s+by\s+([a-z_][\w.]*)\s*,\s*(asc|desc)\b/i);
@@ -561,17 +792,21 @@ function parseSql(sql, requireSemicolon = true) {
     };
   } else {
     const orderMatch = orderSource.match(/\sorder\s+by\s+([a-z_][\w.]*)(?:\s+(asc|desc))?/i);
-    if (orderMatch) parsed.orderBy = { column: orderMatch[1], direction: (orderMatch[2] || "ASC").toUpperCase() };
+  if (orderMatch) parsed.orderBy = { column: orderMatch[1], direction: (orderMatch[2] || "ASC").toUpperCase() };
   }
 
-  const windowColumn = parsed.select.find((column) => /^row_number\(\)\s+over\s*\(/i.test(column));
+  const limitMatch = cleaned.match(/\slimit\s+(\d+)$/i);
+  if (limitMatch) parsed.limit = Number(limitMatch[1]);
+
+  const windowColumn = parsed.select.find((column) => /^(row_number\(\)|rank\(\)|dense_rank\(\)|lag\([\w.]+\)|lead\([\w.]+\))\s+over\s*\(/i.test(column));
   if (windowColumn) {
-    const windowMatch = windowColumn.match(/^row_number\(\)\s+over\s*\(\s*partition\s+by\s+([a-z_][\w.]*)\s+order\s+by\s+([a-z_][\w.]*)(?:\s+(asc|desc))?\s*\)$/i);
+    const windowMatch = windowColumn.match(/^(row_number\(\)|rank\(\)|dense_rank\(\)|lag\(([\w.]+)\)|lead\(([\w.]+)\))\s+over\s*\(\s*partition\s+by\s+([a-z_][\w.]*)\s+order\s+by\s+([a-z_][\w.]*)(?:\s+(asc|desc))?\s*\)$/i);
     if (windowMatch) {
       parsed.window = {
-        function: "ROW_NUMBER",
-        partitionBy: windowMatch[1],
-        orderBy: { column: windowMatch[2], direction: (windowMatch[3] || "ASC").toUpperCase() }
+        function: windowMatch[1].split("(")[0].toUpperCase(),
+        valueColumn: windowMatch[2] || windowMatch[3] || null,
+        partitionBy: windowMatch[4],
+        orderBy: { column: windowMatch[5], direction: (windowMatch[6] || "ASC").toUpperCase() }
       };
     }
   }
@@ -618,16 +853,31 @@ function makeRows(parsed) {
   if (parsed.join) {
     const joined = BASE_TABLES[normalizeIdentifier(parsed.join.table)];
     if (!joined) throw new Error(`Unknown joined table "${parsed.join.table}".`);
-    rows = rows.flatMap((leftRow) =>
-      joined
-        .map((row) => prefixRow(row, parsed.join.table))
-        .filter((rightRow) => columnValue(leftRow, parsed.join.left) === columnValue(rightRow, parsed.join.right))
-        .map((rightRow) => ({ ...leftRow, ...rightRow }))
-    );
+    const rightRows = joined.map((row) => prefixRow(row, parsed.join.table));
+    rows = rows.flatMap((leftRow) => {
+      const matches = rightRows.filter((rightRow) => columnValue(leftRow, parsed.join.left) === columnValue(rightRow, parsed.join.right));
+      if (matches.length) return matches.map((rightRow) => ({ ...leftRow, ...rightRow }));
+      return parsed.join.type === "LEFT" ? [leftRow] : [];
+    });
   }
 
   if (parsed.where) {
     rows = rows.filter((row) => compare(columnValue(row, parsed.where.column), parsed.where.operator, parsed.where.value));
+  }
+
+  if (parsed.whereAll) {
+    rows = rows.filter((row) => parsed.whereAll.every((condition) => compare(columnValue(row, condition.column), condition.operator, condition.value)));
+  }
+
+  if (parsed.whereAny) {
+    rows = rows.filter((row) => parsed.whereAny.some((condition) => compare(columnValue(row, condition.column), condition.operator, condition.value)));
+  }
+
+  if (parsed.whereNull) {
+    rows = rows.filter((row) => {
+      const value = columnValue(row, parsed.whereNull.column);
+      return value === null || value === undefined || value === "";
+    });
   }
 
   if (parsed.subqueryWhere) {
@@ -861,11 +1111,15 @@ function evaluateQuery(spec) {
       map.get(key).push(row);
       return map;
     }, new Map());
-    return Array.from(grouped.entries(), ([key, groupRows]) => projectAggregateGroup(spec, groupCol, key, groupRows));
+    let groupedRows = Array.from(grouped.entries(), ([key, groupRows]) => projectAggregateGroup(spec, groupCol, key, groupRows));
+    if (spec.having) {
+      groupedRows = groupedRows.filter((row) => compare(row[normalizeAggregateKey(spec.having.aggregate)] ?? row[spec.having.aggregate], spec.having.operator, spec.having.value));
+    }
+    return applyDistinctAndLimit(groupedRows, spec);
   }
 
   if (aggregate) {
-    return [projectAggregateGroup(spec, null, null, rows)];
+    return applyDistinctAndLimit([projectAggregateGroup(spec, null, null, rows)], spec);
   }
 
   if (spec.orderBy) {
@@ -880,19 +1134,19 @@ function evaluateQuery(spec) {
     });
   }
 
-  if (spec.window?.function === "ROW_NUMBER") {
-    rows = addRowNumbers(rows, spec.window);
+  if (spec.window) {
+    rows = addWindowValues(rows, spec.window);
   }
 
-  const projected = rows.map((row) => {
+  let projected = rows.map((row) => {
     const output = {};
     spec.select.forEach((column) => {
-      output[column] = projectExpression(row, column);
+      output[getAlias(spec.aliases, column) || column] = projectExpression(row, column);
     });
     return output;
   });
 
-  return projected;
+  return applyDistinctAndLimit(projected, spec);
 }
 
 function projectAggregateGroup(spec, groupCol, groupKey, rows) {
@@ -902,30 +1156,63 @@ function projectAggregateGroup(spec, groupCol, groupKey, rows) {
     const avg = column.match(/^avg\(([\w.]+)\)$/i);
     const max = column.match(/^max\(([\w.]+)\)$/i);
     const sum = column.match(/^sum\(([\w.]+)\)$/i);
-    if (count) output["COUNT(*)"] = rows.length;
-    else if (avg) output[`AVG(${avg[1]})`] = Math.round(rows.reduce((sum, row) => sum + Number(columnValue(row, avg[1])), 0) / rows.length);
-    else if (max) output[`MAX(${max[1]})`] = Math.max(...rows.map((row) => Number(columnValue(row, max[1]))));
-    else if (sum) output[`SUM(${sum[1]})`] = rows.reduce((total, row) => total + Number(columnValue(row, sum[1])), 0);
-    else if (groupCol && normalizeIdentifier(column) === normalizeIdentifier(groupCol)) output[column] = groupKey;
-    else output[column] = projectExpression(rows[0] || {}, column);
+    const countDistinct = column.match(/^count\(distinct\s+([\w.]+)\)$/i);
+    const alias = getAlias(spec.aliases, column) || column;
+    if (count) output[alias] = rows.length;
+    else if (countDistinct) output[alias] = new Set(rows.map((row) => columnValue(row, countDistinct[1]))).size;
+    else if (avg) output[alias] = Math.round(rows.reduce((sum, row) => sum + Number(columnValue(row, avg[1])), 0) / rows.length);
+    else if (max) output[alias] = Math.max(...rows.map((row) => Number(columnValue(row, max[1]))));
+    else if (sum) output[alias] = rows.reduce((total, row) => total + Number(columnValue(row, sum[1])), 0);
+    else if (groupCol && normalizeIdentifier(column) === normalizeIdentifier(groupCol)) output[alias] = groupKey;
+    else output[alias] = projectExpression(rows[0] || {}, column);
   }
   return output;
 }
 
+function normalizeAggregateKey(aggregate) {
+  return aggregate.toUpperCase().replace(/\s+/g, " ");
+}
+
+function getAlias(aliases, column) {
+  if (!aliases) return "";
+  const entry = Object.entries(aliases).find(([key]) => normalizeIdentifier(key) === normalizeIdentifier(column));
+  return entry ? entry[1] : "";
+}
+
+function applyDistinctAndLimit(rows, spec) {
+  let output = rows;
+  if (spec.distinct) {
+    const seen = new Set();
+    output = output.filter((row) => {
+      const key = JSON.stringify(canonicalResult([row])[0]);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+  if (spec.limit) output = output.slice(0, spec.limit);
+  return output;
+}
+
 function projectExpression(row, expression) {
+  const coalesceMatch = expression.match(/^coalesce\(([\w.]+),\s*('[^']*'|"[^"]*"|[\w.]+)\)$/i);
+  if (coalesceMatch) {
+    const value = columnValue(row, coalesceMatch[1]);
+    return value === null || value === undefined || value === "" ? normalizeValue(coalesceMatch[2]) : value;
+  }
   const caseMatch = expression.match(/^case\s+when\s+([a-z_][\w.]*)\s*(=|!=|<>|>=|<=|>|<)\s*('[^']*'|"[^"]*"|[\w.]+)\s+then\s+('[^']*'|"[^"]*"|[\w.]+)\s+else\s+('[^']*'|"[^"]*"|[\w.]+)\s+end$/i);
   if (caseMatch) {
     return compare(columnValue(row, caseMatch[1]), caseMatch[2] === "<>" ? "!=" : caseMatch[2], normalizeValue(caseMatch[3]))
       ? normalizeValue(caseMatch[4])
       : normalizeValue(caseMatch[5]);
   }
-  if (/^row_number\(\)\s+over\s*\(/i.test(expression)) {
-    return row.__row_number;
+  if (/^(row_number\(\)|rank\(\)|dense_rank\(\)|lag\([\w.]+\)|lead\([\w.]+\))\s+over\s*\(/i.test(expression)) {
+    return row.__window_value;
   }
   return columnValue(row, expression);
 }
 
-function addRowNumbers(rows, windowSpec) {
+function addWindowValues(rows, windowSpec) {
   const grouped = rows.reduce((map, row) => {
     const key = columnValue(row, windowSpec.partitionBy);
     if (!map.has(key)) map.set(key, []);
@@ -933,8 +1220,8 @@ function addRowNumbers(rows, windowSpec) {
     return map;
   }, new Map());
 
-  return Array.from(grouped.values()).flatMap((groupRows) =>
-    [...groupRows]
+  return Array.from(grouped.values()).flatMap((groupRows) => {
+    const sorted = [...groupRows]
       .sort((a, b) => {
         const left = columnValue(a, windowSpec.orderBy.column);
         const right = columnValue(b, windowSpec.orderBy.column);
@@ -942,9 +1229,19 @@ function addRowNumbers(rows, windowSpec) {
           return windowSpec.orderBy.direction === "DESC" ? right - left : left - right;
         }
         return windowSpec.orderBy.direction === "DESC" ? String(right).localeCompare(String(left)) : String(left).localeCompare(String(right));
-      })
-      .map((row, index) => ({ ...row, __row_number: index + 1 }))
-  );
+      });
+    return sorted.map((row, index) => {
+      let value = index + 1;
+      if (windowSpec.function === "LAG") value = index === 0 ? null : columnValue(sorted[index - 1], windowSpec.valueColumn);
+      if (windowSpec.function === "LEAD") value = index === sorted.length - 1 ? null : columnValue(sorted[index + 1], windowSpec.valueColumn);
+      if (windowSpec.function === "RANK" || windowSpec.function === "DENSE_RANK") {
+        const current = columnValue(row, windowSpec.orderBy.column);
+        const priorValues = sorted.slice(0, index).map((item) => columnValue(item, windowSpec.orderBy.column));
+        value = windowSpec.function === "DENSE_RANK" ? new Set(priorValues).size + 1 : priorValues.filter((item) => item !== current).length + 1;
+      }
+      return { ...row, __window_value: value };
+    });
+  });
 }
 
 function diagnose(parsed, expected, resultMatches) {
@@ -957,6 +1254,16 @@ function diagnose(parsed, expected, resultMatches) {
   }
 
   compareList("SELECT", parsed.select, expected.select, messages);
+  if (expected.distinct && !parsed.distinct) {
+    messages.push({ type: "bad", title: "DISTINCT", text: "Add DISTINCT after SELECT so duplicate values are removed." });
+  }
+  if (expected.aliases) {
+    for (const [column, alias] of Object.entries(expected.aliases)) {
+      if (normalizeIdentifier(getAlias(parsed.aliases, column)) !== normalizeIdentifier(alias)) {
+        messages.push({ type: "bad", title: "Alias", text: `Use ${column} AS ${alias}.` });
+      }
+    }
+  }
   if (normalizeIdentifier(parsed.from) !== normalizeIdentifier(expected.from)) {
     messages.push({ type: "bad", title: "FROM", text: `Use the ${expected.from} table. You used ${parsed.from || "nothing"}.` });
   }
@@ -964,6 +1271,9 @@ function diagnose(parsed, expected, resultMatches) {
     if (!parsed.join) {
       messages.push({ type: "bad", title: "JOIN", text: `Join ${expected.join.table} using ${expected.join.left} = ${expected.join.right}.` });
     } else {
+      if ((expected.join.type || "INNER") !== (parsed.join.type || "INNER")) {
+        messages.push({ type: "bad", title: "JOIN type", text: `Use ${expected.join.type || "INNER"} JOIN, not ${parsed.join.type || "INNER"} JOIN.` });
+      }
       comparePart("JOIN table", parsed.join.table, expected.join.table, messages);
       comparePart("JOIN left key", parsed.join.left, expected.join.left, messages);
       comparePart("JOIN right key", parsed.join.right, expected.join.right, messages);
@@ -998,10 +1308,28 @@ function diagnose(parsed, expected, resultMatches) {
       }
     }
   }
+  if (expected.whereAll && !parsed.whereAll) {
+    messages.push({ type: "bad", title: "AND", text: "Use AND so both conditions must be true." });
+  }
+  if (expected.whereAny && !parsed.whereAny) {
+    messages.push({ type: "bad", title: "OR", text: "Use OR so either condition can be true." });
+  }
+  if (expected.whereNull && !parsed.whereNull) {
+    messages.push({ type: "bad", title: "NULL handling", text: `Use WHERE ${expected.whereNull.column} IS NULL.` });
+  }
   if (expected.caseWhen && !parsed.select.some((column) => /^case\s+when\s+/i.test(column))) {
     messages.push({ type: "bad", title: "CASE WHEN", text: "Use a CASE WHEN expression in the SELECT clause." });
   }
   if (expected.groupBy) compareList("GROUP BY", parsed.groupBy || [], expected.groupBy, messages);
+  if (expected.having) {
+    if (!parsed.having) {
+      messages.push({ type: "bad", title: "HAVING", text: `Add HAVING ${expected.having.aggregate} ${expected.having.operator} ${expected.having.value}.` });
+    } else {
+      comparePart("HAVING aggregate", parsed.having.aggregate, expected.having.aggregate, messages);
+      if (parsed.having.operator !== expected.having.operator) messages.push({ type: "bad", title: "HAVING operator", text: `Use ${expected.having.operator}, not ${parsed.having.operator}.` });
+      if (String(parsed.having.value) !== String(expected.having.value)) messages.push({ type: "bad", title: "HAVING value", text: `Use ${expected.having.value}, not ${parsed.having.value}.` });
+    }
+  }
   if (expected.window) {
     if (!parsed.window) {
       messages.push({ type: "bad", title: "Window function", text: `Use ROW_NUMBER() OVER (PARTITION BY ${expected.window.partitionBy} ORDER BY ${expected.window.orderBy.column} ${expected.window.orderBy.direction}).` });
@@ -1022,6 +1350,9 @@ function diagnose(parsed, expected, resultMatches) {
         messages.push({ type: "bad", title: "ORDER BY direction", text: `Use ${expected.orderBy.direction}, not ${parsed.orderBy.direction}.` });
       }
     }
+  }
+  if (expected.limit && parsed.limit !== expected.limit) {
+    messages.push({ type: "bad", title: "LIMIT", text: `Use LIMIT ${expected.limit}.` });
   }
 
   if (resultMatches && messages.length === 0) {
@@ -1135,7 +1466,7 @@ function renderChallengeList() {
 function renderStats() {
   el.score.textContent = state.score;
   el.streak.textContent = state.streak;
-  el.doneCount.textContent = `${state.solved.size}/100`;
+  el.doneCount.textContent = `${state.solved.size}/${TOTAL_QUESTIONS}`;
   const totalAttempts = Object.values(state.skill).reduce((sum, item) => sum + item.total, 0);
   const totalCorrect = Object.values(state.skill).reduce((sum, item) => sum + item.correct, 0);
   el.accuracy.textContent = `${totalAttempts ? Math.round((totalCorrect / totalAttempts) * 100) : 0}%`;

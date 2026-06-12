@@ -27,12 +27,19 @@ No install step is required.
 - Prompts learners to move to the next question after a correct answer
 - Requires semicolons so learners practice ending SQL statements properly
 - Lets learners log in with email/password and resume progress with Supabase
-- Includes 100 varied drills from beginner to harder query patterns
+- Includes 150 varied drills from beginner fundamentals to analyst-style business SQL
 
 ## Curriculum Split
 
 - Questions 1-16: SELECT, WHERE, and ORDER BY fundamentals
-- Questions 17-100: COUNT, GROUP BY, JOINs, CASE WHEN, subqueries, CTEs, window functions, and business-style SQL
+- Questions 17-30: DISTINCT, aliases, LIMIT, and AND/OR logic
+- Questions 31-45: aggregates, GROUP BY, and HAVING
+- Questions 46-65: INNER JOIN and LEFT JOIN practice
+- Questions 66-80: CASE WHEN and segmentation
+- Questions 81-95: subqueries and CTEs
+- Questions 96-115: window functions such as ROW_NUMBER, RANK, LAG, and LEAD
+- Questions 116-130: NULLs, dates, strings, and data cleaning
+- Questions 131-150: business KPI drills for revenue, retention, churn, and cohorts
 
 ## Progress Saving
 
@@ -69,7 +76,7 @@ Edit `app.js`.
 - Add more feedback rules in `diagnose`
 - Add more SQL support in `parseSql` and `evaluateQuery`
 
-The current evaluator intentionally supports a focused SQL-training subset, including common forms of joins, grouped aggregates, CASE WHEN, one-level subqueries, simple CTEs, and ROW_NUMBER window functions. For a production version, the next step would be replacing the hand-built evaluator with SQLite or DuckDB in the browser, while keeping the clause diagnostics layer.
+The current evaluator intentionally supports a focused SQL-training subset, including common forms of joins, grouped aggregates, CASE WHEN, one-level subqueries, simple CTEs, NULL checks, COALESCE cleaning, COUNT DISTINCT, and common window functions. For a production version, the next step would be replacing the hand-built evaluator with SQLite or DuckDB in the browser, while keeping the clause diagnostics layer.
 
 ## Intellectual Property
 
