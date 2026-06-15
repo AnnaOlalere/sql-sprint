@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sql-sprint-five.vercel.app/sitemap.xml
