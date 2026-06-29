@@ -979,7 +979,7 @@ async function saveProgress() {
       updated_at: new Date().toISOString()
     });
     if (error) {
-      el.profileStatus.textContent = `Signed in as ${state.profile}. Cloud save failed: ${error.message}`;
+      el.profileStatus.textContent = `Signed in as ${state.profile}. Cloud progress is temporarily unavailable. You can keep practicing in this session.`;
       return;
     }
     el.profileStatus.textContent = `Signed in as ${state.profile}. Progress saved to Supabase.`;
@@ -1379,6 +1379,18 @@ function compareList(title, actual, expected, messages) {
   const missing = expected.filter((column) => !actualSet.includes(normalizeIdentifier(column)));
   const extra = actual.filter((column) => !expectedSet.includes(normalizeIdentifier(column)));
   if (missing.length || extra.length) {
+    if (
+      title === "SELECT" &&
+      missing.some((column) => /^count\(\*\)$/i.test(column)) &&
+      extra.some((column) => /^count\s+\(\*\)$/i.test(column))
+    ) {
+      messages.push({
+        type: "bad",
+        title: "COUNT syntax",
+        text: "Write COUNT(*) with no space between COUNT and (*). Use COUNT(*), not COUNT (*)."
+      });
+      return;
+    }
     if (missing.length === 1 && extra.length === 1 && normalizeIdentifier(extra[0]).replace(/s$/, "") === normalizeIdentifier(missing[0])) {
       messages.push({
         type: "bad",
