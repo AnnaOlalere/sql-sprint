@@ -80,10 +80,37 @@
           <div id="skillMap" class="skill-map"></div>
         </section>
 
+        <section class="adaptive-panel" aria-label="Adaptive practice">
+          <h2>Adaptive Practice</h2>
+          <p id="adaptiveSummary">Answer a few drills to unlock a personalized practice path.</p>
+          <div class="adaptive-metrics">
+            <div>
+              <span class="metric-label">Weakest</span>
+              <strong id="weakSkill">Not enough data</strong>
+            </div>
+            <div>
+              <span class="metric-label">Strongest</span>
+              <strong id="strongSkill">Not enough data</strong>
+            </div>
+            <div>
+              <span class="metric-label">Recent</span>
+              <strong id="recentAccuracy">0%</strong>
+            </div>
+            <div>
+              <span class="metric-label">Hint solves</span>
+              <strong id="hintAssistCount">0</strong>
+            </div>
+          </div>
+          <p id="mistakePattern">Common mistake: not enough data yet.</p>
+          <button id="adaptiveBtn" type="button">Start Adaptive Practice</button>
+          <p id="adaptiveNote">Uses deterministic scoring from your attempts. No AI-generated questions.</p>
+        </section>
+
         <section class="filter-panel" aria-label="Question filters">
           <h2>Practice Mode</h2>
           <select id="topicFilter" aria-label="Filter by topic">
             <option value="ALL">All topics</option>
+            <option value="ADAPTIVE">Adaptive Practice</option>
             <option value="MISSED">Review Missed Questions</option>
             <option value="SELECT">SELECT</option>
             <option value="WHERE">WHERE</option>

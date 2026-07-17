@@ -171,17 +171,71 @@ button {
 }
 
 .skill-panel,
+.adaptive-panel,
 .filter-panel,
 .challenge-list {
   min-height: 0;
 }
 
 .skill-panel h2,
+.adaptive-panel h2,
 .filter-panel h2,
 .challenge-list h2 {
   margin-bottom: 10px;
   font-size: 14px;
   color: #dbe3ed;
+}
+
+.adaptive-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.adaptive-panel h2 {
+  margin-bottom: 0;
+}
+
+.adaptive-panel p {
+  margin: 0;
+  color: #b9c2cf;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.adaptive-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.adaptive-metrics > div {
+  min-width: 0;
+  padding: 9px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.adaptive-metrics strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 3px;
+  color: #f8fafc;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adaptive-panel button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 7px;
+  background: #31c48d;
+  color: #102017;
+  font-weight: 900;
 }
 
 .filter-panel {

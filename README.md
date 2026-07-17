@@ -24,6 +24,8 @@ No install step is required.
 - Includes analyst-style drills for `CASE WHEN`, subqueries, CTEs, window functions, and KPI-style subscription questions
 - Tracks score, streak, accuracy, solved drills, and skill-area progress
 - Lets learners filter by topic, review missed questions, and read short explanations after correct answers
+- Recommends adaptive practice topics from learner performance, hint use, missed drills, and repeated mistake patterns
+- Starts personalized adaptive sessions from the existing validated question bank
 - Prompts learners to move to the next question after a correct answer
 - Requires semicolons so learners practice ending SQL statements properly
 - Lets learners log in with email/password and resume progress with Supabase
@@ -77,6 +79,12 @@ Edit `app.js`.
 - Add more SQL support in `parseSql` and `evaluateQuery`
 
 The current evaluator intentionally supports a focused SQL-training subset, including common forms of joins, grouped aggregates, CASE WHEN, one-level subqueries, simple CTEs, NULL checks, COALESCE cleaning, COUNT DISTINCT, and common window functions. For a production version, the next step would be replacing the hand-built evaluator with SQLite or DuckDB in the browser, while keeping the clause diagnostics layer.
+
+## Adaptive Practice
+
+Adaptive Practice uses deterministic application logic, not AI-generated SQL, to keep drills valid and answerable. The app stores recent attempt history, topic, difficulty, correctness, hint use, answer reveals, attempts used, and mistake types. It then recommends the weakest topic and creates a targeted practice session from the existing 150 vetted drills.
+
+OpenAI can be added later through a server-side function for optional coach summaries, but API keys should never be placed in browser JavaScript.
 
 ## Intellectual Property
 

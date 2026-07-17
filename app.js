@@ -95,10 +95,14 @@ const state = {
   score: 0,
   streak: 0,
   attempts: 0,
+  hintUsed: false,
+  answerShown: false,
   filter: "ALL",
+  adaptiveSession: [],
   solved: new Set(),
   missed: new Set(),
-  skill: Object.fromEntries(SKILLS.map((skill) => [skill, { correct: 0, total: 0 }]))
+  skill: Object.fromEntries(SKILLS.map((skill) => [skill, { correct: 0, total: 0 }])),
+  analytics: createEmptyAnalytics()
 };
 
 const templates = [
@@ -653,7 +657,15 @@ const el = {
   hintBtn: document.querySelector("#hintBtn"),
   answerBtn: document.querySelector("#answerBtn"),
   prevBtn: document.querySelector("#prevBtn"),
-  nextBtn: document.querySelector("#nextBtn")
+  nextBtn: document.querySelector("#nextBtn"),
+  adaptiveSummary: document.querySelector("#adaptiveSummary"),
+  weakSkill: document.querySelector("#weakSkill"),
+  strongSkill: document.querySelector("#strongSkill"),
+  recentAccuracy: document.querySelector("#recentAccuracy"),
+  hintAssistCount: document.querySelector("#hintAssistCount"),
+  mistakePattern: document.querySelector("#mistakePattern"),
+  adaptiveBtn: document.querySelector("#adaptiveBtn"),
+  adaptiveNote: document.querySelector("#adaptiveNote")
 };
 
 function normalizeIdentifier(value) {
@@ -897,6 +909,13 @@ function storageKey(profile) {
   return `${STORAGE_PREFIX}${profile.trim().toLowerCase()}`;
 }
 
+function createEmptyAnalytics() {
+  return {
+    attempts: [],
+    recommendation: null
+  };
+}
+
 function resetProgress(profile = state.profile, userId = state.userId) {
   state.profile = profile;
   state.userId = userId;
@@ -904,10 +923,14 @@ function resetProgress(profile = state.profile, userId = state.userId) {
   state.score = 0;
   state.streak = 0;
   state.attempts = 0;
+  state.hintUsed = false;
+  state.answerShown = false;
   state.filter = "ALL";
+  state.adaptiveSession = [];
   state.solved = new Set();
   state.missed = new Set();
   state.skill = Object.fromEntries(SKILLS.map((skill) => [skill, { correct: 0, total: 0 }]));
+  state.analytics = createEmptyAnalytics();
 }
 
 function serializeProgress() {
@@ -918,9 +941,11 @@ function serializeProgress() {
     score: state.score,
     streak: state.streak,
     filter: state.filter,
+    adaptiveSession: state.adaptiveSession,
     solved: Array.from(state.solved),
     missed: Array.from(state.missed),
-    skill: state.skill
+    skill: state.skill,
+    analytics: state.analytics
   };
 }
 
@@ -929,12 +954,19 @@ function applyProgress(progress) {
   state.score = Number(progress?.score) || 0;
   state.streak = Number(progress?.streak) || 0;
   state.filter = progress?.filter || "ALL";
+  state.adaptiveSession = Array.isArray(progress?.adaptiveSession) ? progress.adaptiveSession.filter((index) => challenges[index]) : [];
   state.solved = new Set(progress?.solved || []);
   state.missed = new Set(progress?.missed || []);
   state.skill = { ...state.skill, ...(progress?.skill || {}) };
+  state.analytics = {
+    ...createEmptyAnalytics(),
+    ...(progress?.analytics || {})
+  };
+  if (!Array.isArray(state.analytics.attempts)) state.analytics.attempts = [];
 }
 
 function filteredChallengeIndexes() {
+  if (state.filter === "ADAPTIVE") return state.adaptiveSession.filter((index) => challenges[index]);
   if (state.filter === "MISSED") return Array.from(state.missed).filter((index) => challenges[index]);
   if (state.filter === "ALL") return challenges.map((_, index) => index);
   return challenges
@@ -952,6 +984,7 @@ function ensureVisibleChallenge() {
 function setupFilters() {
   const options = [
     `<option value="ALL">All topics</option>`,
+    `<option value="ADAPTIVE">Adaptive Practice</option>`,
     `<option value="MISSED">Review Missed Questions</option>`,
     ...SKILLS.map((skill) => `<option value="${skill}">${skill}</option>`)
   ];
@@ -961,7 +994,7 @@ function setupFilters() {
 
 function renderFilterStatus() {
   const count = filteredChallengeIndexes().length;
-  const label = state.filter === "ALL" ? "all topics" : state.filter === "MISSED" ? "missed questions" : state.filter;
+  const label = state.filter === "ALL" ? "all topics" : state.filter === "MISSED" ? "missed questions" : state.filter === "ADAPTIVE" ? "adaptive practice" : state.filter;
   el.filterStatus.textContent = `Showing ${count} ${label} drill${count === 1 ? "" : "s"}.`;
 }
 
@@ -976,6 +1009,7 @@ async function saveProgress() {
       solved: Array.from(state.solved),
       missed: Array.from(state.missed),
       skill: state.skill,
+      analytics: state.analytics,
       updated_at: new Date().toISOString()
     });
     if (error) {
@@ -1437,6 +1471,8 @@ function renderChallenge() {
   ensureVisibleChallenge();
   const challenge = challenges[state.current];
   state.attempts = 0;
+  state.hintUsed = false;
+  state.answerShown = false;
   el.difficulty.textContent = challenge.difficulty;
   el.prompt.textContent = challenge.prompt;
   el.sqlInput.value = "";
@@ -1487,6 +1523,186 @@ function renderStats() {
     const pct = item.total ? Math.round((item.correct / item.total) * 100) : 0;
     return `<div class="skill-row"><span>${skill}</span><div class="bar"><span style="width:${pct}%"></span></div><span>${pct}%</span></div>`;
   }).join("");
+  renderAdaptiveDashboard();
+}
+
+function getAdaptiveStats() {
+  const attempts = Array.isArray(state.analytics.attempts) ? state.analytics.attempts : [];
+  const bySkill = Object.fromEntries(SKILLS.map((skill) => [skill, {
+    skill,
+    total: 0,
+    correct: 0,
+    incorrect: 0,
+    hintCorrect: 0,
+    answerCorrect: 0,
+    attemptsUsed: 0,
+    mistakes: {}
+  }]));
+
+  for (const attempt of attempts) {
+    const item = bySkill[attempt.skill];
+    if (!item) continue;
+    item.total += 1;
+    item.attemptsUsed += Number(attempt.attemptsUsed) || 1;
+    if (attempt.correct) {
+      item.correct += 1;
+      if (attempt.hintUsed) item.hintCorrect += 1;
+      if (attempt.answerShown) item.answerCorrect += 1;
+    } else {
+      item.incorrect += 1;
+    }
+    for (const mistake of attempt.mistakeTypes || []) {
+      item.mistakes[mistake] = (item.mistakes[mistake] || 0) + 1;
+    }
+  }
+
+  const recent = attempts.slice(-20);
+  const recentCorrect = recent.filter((attempt) => attempt.correct).length;
+  const ranked = Object.values(bySkill)
+    .filter((item) => item.total > 0)
+    .map((item) => {
+      const accuracy = item.correct / item.total;
+      const hintRate = item.correct ? item.hintCorrect / item.correct : 0;
+      const avgAttempts = item.attemptsUsed / item.total;
+      const missedCount = challenges.filter((challenge, index) => challenge.skill === item.skill && state.missed.has(index)).length;
+      const weaknessScore = Math.round(((1 - accuracy) * 60) + (hintRate * 20) + (Math.max(0, avgAttempts - 1) * 8) + (missedCount * 3));
+      return { ...item, accuracy, hintRate, avgAttempts, missedCount, weaknessScore };
+    });
+
+  const weakest = ranked.slice().sort((a, b) => b.weaknessScore - a.weaknessScore || b.total - a.total)[0] || null;
+  const secondary = ranked.slice().filter((item) => item.skill !== weakest?.skill).sort((a, b) => b.weaknessScore - a.weaknessScore || b.total - a.total)[0] || null;
+  const strongest = ranked.slice().filter((item) => item.total >= 2).sort((a, b) => b.accuracy - a.accuracy || b.total - a.total)[0] || null;
+  const mistakeCounts = {};
+  for (const attempt of attempts) {
+    for (const mistake of attempt.mistakeTypes || []) {
+      mistakeCounts[mistake] = (mistakeCounts[mistake] || 0) + 1;
+    }
+  }
+  const commonMistake = Object.entries(mistakeCounts).sort((a, b) => b[1] - a[1])[0] || null;
+
+  return {
+    attempts,
+    bySkill,
+    ranked,
+    weakest,
+    secondary,
+    strongest,
+    commonMistake,
+    recentAccuracy: recent.length ? Math.round((recentCorrect / recent.length) * 100) : 0,
+    hintCorrectCount: attempts.filter((attempt) => attempt.correct && attempt.hintUsed).length,
+    answerCorrectCount: attempts.filter((attempt) => attempt.correct && attempt.answerShown).length
+  };
+}
+
+function getRecommendation() {
+  const stats = getAdaptiveStats();
+  const firstUnsolved = challenges.find((_, index) => !state.solved.has(index));
+  const weakestSkill = stats.weakest?.skill || firstUnsolved?.skill || "WHERE";
+  const secondarySkill = stats.secondary?.skill || SKILLS.find((skill) => skill !== weakestSkill && challenges.some((challenge) => challenge.skill === skill)) || "SELECT";
+  const reason = stats.weakest
+    ? `${weakestSkill} has the highest weakness score based on accuracy, hints, attempts, and missed drills.`
+    : "Answer a few drills and SQL Sprint will personalize this recommendation.";
+  return {
+    weakestSkill,
+    secondarySkill,
+    strongestSkill: stats.strongest?.skill || "",
+    reason,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function renderAdaptiveDashboard() {
+  const stats = getAdaptiveStats();
+  const recommendation = getRecommendation();
+  state.analytics.recommendation = recommendation;
+  const hasData = stats.attempts.length > 0;
+
+  el.weakSkill.textContent = hasData ? recommendation.weakestSkill : "Not enough data";
+  el.strongSkill.textContent = stats.strongest?.skill || "Not enough data";
+  el.recentAccuracy.textContent = `${stats.recentAccuracy}%`;
+  el.hintAssistCount.textContent = String(stats.hintCorrectCount);
+  el.mistakePattern.textContent = stats.commonMistake
+    ? `Common mistake: ${stats.commonMistake[0]} (${stats.commonMistake[1]} time${stats.commonMistake[1] === 1 ? "" : "s"}).`
+    : "Common mistake: not enough data yet.";
+  el.adaptiveSummary.textContent = hasData
+    ? `Recommended next topic: ${recommendation.weakestSkill}. ${recommendation.reason}`
+    : "Answer a few drills to unlock a personalized practice path.";
+  el.adaptiveNote.textContent = state.filter === "ADAPTIVE" && state.adaptiveSession.length
+    ? `Adaptive session active: ${state.adaptiveSession.length} targeted drills selected from your weak topics.`
+    : "Uses deterministic scoring from your attempts. No AI-generated questions.";
+}
+
+function recordAttempt(challenge, resultMatches, messages) {
+  const mistakeTypes = messages
+    .filter((message) => message.type === "bad" || message.type === "warn")
+    .map((message) => message.title);
+  const attempt = {
+    questionId: challenge.id,
+    questionIndex: state.current,
+    skill: challenge.skill,
+    difficulty: challenge.difficulty,
+    correct: resultMatches,
+    outcome: resultMatches ? (state.answerShown ? "correct_after_answer" : state.hintUsed ? "correct_after_hint" : "correct_independent") : "incorrect",
+    attemptsUsed: state.attempts,
+    hintUsed: state.hintUsed,
+    answerShown: state.answerShown,
+    mistakeTypes,
+    timestamp: new Date().toISOString()
+  };
+  state.analytics.attempts = [...(state.analytics.attempts || []), attempt].slice(-300);
+  state.analytics.recommendation = getRecommendation();
+}
+
+function pickQuestionsForSkill(skill, count, used) {
+  const pool = challenges
+    .map((challenge, index) => ({ challenge, index }))
+    .filter(({ challenge, index }) => challenge.skill === skill && !used.has(index));
+  const unsolved = pool.filter(({ index }) => !state.solved.has(index));
+  const source = unsolved.length ? unsolved : pool;
+  return source.slice(0, count).map(({ index }) => index);
+}
+
+function buildAdaptiveSession() {
+  const recommendation = getRecommendation();
+  const used = new Set();
+  const selected = [];
+  const add = (indexes) => {
+    for (const index of indexes) {
+      if (!used.has(index)) {
+        selected.push(index);
+        used.add(index);
+      }
+    }
+  };
+
+  add(Array.from(state.missed).filter((index) => challenges[index]).slice(0, 2));
+  add(pickQuestionsForSkill(recommendation.weakestSkill, 6, used));
+  add(pickQuestionsForSkill(recommendation.secondarySkill, 3, used));
+
+  if (selected.length < 10) {
+    const rankedSkills = getAdaptiveStats().ranked.sort((a, b) => b.weaknessScore - a.weaknessScore).map((item) => item.skill);
+    for (const skill of rankedSkills) {
+      add(pickQuestionsForSkill(skill, 10 - selected.length, used));
+      if (selected.length >= 10) break;
+    }
+  }
+  if (selected.length < 10) {
+    add(challenges.map((_, index) => index).filter((index) => !state.solved.has(index) && !used.has(index)).slice(0, 10 - selected.length));
+  }
+  if (selected.length < 10) {
+    add(challenges.map((_, index) => index).filter((index) => !used.has(index)).slice(0, 10 - selected.length));
+  }
+  return selected.slice(0, 10);
+}
+
+function startAdaptivePractice() {
+  state.adaptiveSession = buildAdaptiveSession();
+  if (!state.adaptiveSession.length) return;
+  state.filter = "ADAPTIVE";
+  state.current = state.adaptiveSession[0];
+  renderChallenge();
+  renderStats();
+  saveProgress();
 }
 
 function runCurrentQuery() {
@@ -1512,6 +1728,7 @@ function runCurrentQuery() {
   el.actualResult.innerHTML = parsed.error ? "<div class=\"empty-state\">Query could not run.</div>" : renderTable(actual);
 
   state.skill[challenge.skill].total += 1;
+  recordAttempt(challenge, resultMatches, messages);
   if (resultMatches) {
     state.skill[challenge.skill].correct += 1;
     if (!state.solved.has(state.current)) {
@@ -1553,6 +1770,7 @@ function explainChallenge(challenge) {
 
 function showHint() {
   const challenge = challenges[state.current];
+  state.hintUsed = true;
   const parts = [`Start with SELECT ${challenge.expected.select.join(", ")} FROM ${challenge.expected.from}`];
   if (challenge.expected.cte) parts.unshift(`WITH ${challenge.expected.cte.name} AS (...)`);
   if (challenge.expected.join) parts.push(`JOIN ${challenge.expected.join.table} ON ${challenge.expected.join.left} = ${challenge.expected.join.right}`);
@@ -1567,6 +1785,7 @@ function showHint() {
 
 function showAnswer() {
   const challenge = challenges[state.current];
+  state.answerShown = true;
   el.feedback.className = "feedback";
   el.feedback.innerHTML = `<div class="feedback-item warn"><strong>Answer</strong><div class="answer-code">${escapeHtml(challenge.answer)}</div></div>`;
 }
@@ -1585,6 +1804,7 @@ el.hintBtn.addEventListener("click", showHint);
 el.answerBtn.addEventListener("click", showAnswer);
 el.prevBtn.addEventListener("click", () => move(-1));
 el.nextBtn.addEventListener("click", () => move(1));
+el.adaptiveBtn.addEventListener("click", startAdaptivePractice);
 el.loginBtn.addEventListener("click", signIn);
 el.signupBtn.addEventListener("click", signUp);
 el.logoutBtn.addEventListener("click", signOut);

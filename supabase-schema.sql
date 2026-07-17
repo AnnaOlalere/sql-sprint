@@ -12,6 +12,9 @@ create table if not exists public.sql_sprint_progress (
 alter table public.sql_sprint_progress
 add column if not exists missed jsonb not null default '[]'::jsonb;
 
+alter table public.sql_sprint_progress
+add column if not exists analytics jsonb not null default '{}'::jsonb;
+
 alter table public.sql_sprint_progress enable row level security;
 
 drop policy if exists "Users can read own SQL Sprint progress" on public.sql_sprint_progress;
