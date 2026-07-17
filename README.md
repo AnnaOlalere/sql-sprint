@@ -86,6 +86,44 @@ Adaptive Practice uses deterministic application logic, not AI-generated SQL, to
 
 OpenAI can be added later through a server-side function for optional coach summaries, but API keys should never be placed in browser JavaScript.
 
+## Build Week Submission
+
+SQL Sprint is an adaptive SQL learning platform for learners who need short, targeted practice instead of generic lessons. It gives immediate clause-level feedback, tracks progress by SQL concept, and recommends personalized practice based on weak topics, hint use, incorrect attempts, and repeated mistake patterns.
+
+### Demo
+
+- Live app: https://sql-sprint-five.vercel.app/
+- Suggested track: Education
+- Built by: Anna Olalere
+
+### How To Test
+
+1. Open the live app.
+2. Sign up or log in with email/password.
+3. Answer one question correctly.
+4. Use a hint on another question, then answer correctly.
+5. Submit one incorrect answer and review the targeted feedback.
+6. Check the Adaptive Practice panel for weakest topic, recent accuracy, hint solves, and common mistake.
+7. Click **Start Adaptive Practice** to launch a personalized practice session.
+8. Refresh or log back in to confirm progress is saved.
+
+### How Codex Was Used
+
+Codex was used to build and refine the SQL evaluator, targeted feedback rules, Supabase progress saving, 150-question curriculum, accessibility/UX improvements, and Adaptive Practice Mode. Codex also helped identify scope boundaries so the Build Week version stays reliable and focused.
+
+### Deterministic vs AI-Assisted
+
+- Deterministic logic handles SQL parsing, result comparison, scoring, progress analytics, weak-topic detection, and adaptive question selection.
+- The current app does not generate live SQL questions with AI, which keeps the practice set valid, answerable, and appropriate for the learner's level.
+- Future OpenAI usage should run through a server-side function and focus on optional coach summaries or explanation rewrites. API keys should never be exposed in browser JavaScript.
+
+### Known Limitations
+
+- The SQL evaluator supports a focused training subset, not every SQL dialect feature.
+- Adaptive Practice selects from the vetted question bank instead of generating unlimited new questions.
+- The app currently tracks one progress row per user.
+- OpenAI-generated coach summaries are planned as a future enhancement, not part of the current browser-only implementation.
+
 ## Intellectual Property
 
 The source code, interface, question wording, fictional practice tables, sample data, explanations, and feedback text are original project materials.
